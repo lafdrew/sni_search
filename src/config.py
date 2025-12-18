@@ -1,8 +1,12 @@
 """Configuration module for SNI RAG system."""
 
 import os
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load .env file first with override=True to prioritize .env over system env vars
+load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
@@ -32,11 +36,11 @@ class Settings(BaseSettings):
     # Data paths
     DATA_DIR: str = "result/results"
 
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "extra": "ignore",
-    }
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

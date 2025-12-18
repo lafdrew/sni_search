@@ -325,36 +325,65 @@ Examples:
         Returns:
             Updated state fields with answer
         """
+        import json
+        import re
+
         query = state["query"]
         tool_results = state.get("tool_results", [])
 
         # Build context from tool results
         context = self._build_context(tool_results)
 
-        # Generate answer using LLM
+        # Generate structured answer using LLM
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    """You are an SNI recognition expert. Based on the query results, provide a concise and professional answer.
+                    """You are an SNI recognition expert. Based on the query results, provide a structured JSON response with ONLY these three fields:
 
-Requirements:
-1. Clearly identify the website/service the SNI corresponds to
-2. Explain its main purpose
-3. Keep it concise, no more than 150 words
-4. If no results found, explain that the SNI is not in the database
+{{
+  "Website/Service": "The name of the website or service",
+  "Explanation": "A brief 1-2 sentence explanation of what this service does",
+  "Query Results": "The raw query results from the database"
+}}
 
-Always respond in the same language as the user's query.""",
+CRITICAL REQUIREMENTS:
+1. Output MUST be valid JSON only, no markdown, no code blocks, no additional text
+2. Start directly with {{ and end with }}
+3. If no results found, use "Unknown" for Website/Service
+4. Always respond in the same language as the user's query
+5. Keep Explanation concise (max 2 sentences)""",
                 ),
-                ("human", "User query: {query}\n\n{context}\n\nPlease answer:"),
+                ("human", "User query: {query}\n\nDatabase results:\n{context}"),
             ]
         )
 
         response = self.llm.invoke(prompt.format_messages(query=query, context=context))
 
+        # Extract JSON from response
+        content = response.content.strip()
+
+        # Try to extract JSON if wrapped in markdown code blocks
+        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+        if json_match:
+            content = json_match.group(1)
+
+        # Remove any leading/trailing non-JSON text
+        if not content.startswith('{'):
+            # Find first {
+            start = content.find('{')
+            if start != -1:
+                content = content[start:]
+
+        if not content.endswith('}'):
+            # Find last }
+            end = content.rfind('}')
+            if end != -1:
+                content = content[:end+1]
+
         return {
-            "answer": response.content,
-            "messages": state.get("messages", []) + [AIMessage(content=response.content)],
+            "answer": content,
+            "messages": state.get("messages", []) + [AIMessage(content=content)],
             "step_count": state.get("step_count", 0) + 1,
         }
 
@@ -375,16 +404,35 @@ Always respond in the same language as the user's query.""",
         for i, result in enumerate(tool_results, 1):
             if isinstance(result, dict):
                 if result.get("found"):
-                    context_parts.append(f"\n{i}. SNI: {result.get('sni')}")
-                    context_parts.append(f"   Domain: {result.get('domain')}")
-                    protocols = result.get("protocols", [])
-                    if protocols:
-                        context_parts.append(f"   Protocols: {', '.join(protocols)}")
-                    related = result.get("all_related_snis", [])
-                    if related:
-                        context_parts.append(
-                            f"   Related SNIs: {', '.join(related[:5])}"
-                        )
+                    # Check if it's new format with multiple matches
+                    if "matches" in result and "match_count" in result:
+                        match_count = result.get("match_count", 0)
+                        matches = result.get("matches", [])
+
+                        context_parts.append(f"\n{i}. Found {match_count} records for SNI: {result.get('sni')}")
+                        context_parts.append("\nAll matching domains:")
+
+                        # Show all matches
+                        for idx, match in enumerate(matches[:20], 1):  # Limit to 20 for readability
+                            context_parts.append(
+                                f"   {idx}. Domain: {match.get('domain')} | "
+                                f"Protocols: {', '.join(match.get('protocols', []))}"
+                            )
+
+                        if match_count > 20:
+                            context_parts.append(f"   ... and {match_count - 20} more records")
+                    else:
+                        # Old format
+                        context_parts.append(f"\n{i}. SNI: {result.get('sni')}")
+                        context_parts.append(f"   Domain: {result.get('domain')}")
+                        protocols = result.get("protocols", [])
+                        if protocols:
+                            context_parts.append(f"   Protocols: {', '.join(protocols)}")
+                        related = result.get("all_related_snis", [])
+                        if related:
+                            context_parts.append(
+                                f"   Related SNIs: {', '.join(related[:5])}"
+                            )
                 elif result.get("error"):
                     context_parts.append(f"\n{i}. Error: {result.get('error')}")
             elif isinstance(result, list) and len(result) > 0:

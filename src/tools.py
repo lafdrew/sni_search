@@ -49,28 +49,36 @@ class SNITools:
             sni: Full SNI name
 
         Returns:
-            SNI details or not found indicator
+            SNI details including all matching records
         """
         results = self.client.scroll(
             collection_name=self.collection_name,
             scroll_filter=Filter(
                 must=[FieldCondition(key="sni", match=MatchValue(value=sni))]
             ),
-            limit=1,
+            limit=100,  # Get all matches
             with_payload=True,
         )
 
         if not results[0]:
             return {"found": False, "sni": sni}
 
-        point = results[0][0]
+        # Return all matching records
+        all_matches = []
+        for point in results[0]:
+            all_matches.append({
+                "sni": point.payload.get("sni"),
+                "domain": point.payload.get("domain"),
+                "all_related_snis": point.payload.get("all_snis", []),
+                "protocols": point.payload.get("alpn_protocols", []),
+                "total_count": point.payload.get("total_count"),
+            })
+
         return {
             "found": True,
-            "sni": point.payload.get("sni"),
-            "domain": point.payload.get("domain"),
-            "all_related_snis": point.payload.get("all_snis", []),
-            "protocols": point.payload.get("alpn_protocols", []),
-            "total_count": point.payload.get("total_count"),
+            "sni": sni,
+            "match_count": len(all_matches),
+            "matches": all_matches,
         }
 
     def search_sni_vector(

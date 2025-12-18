@@ -65,20 +65,35 @@ def query_direct(sni: str) -> dict:
 
 def format_result(result: dict) -> str:
     """Format result for display."""
+    import json
     lines = []
-    lines.append("-" * 50)
+    lines.append("=" * 60)
 
     if "error" in result:
         lines.append(f"Error: {result['error']}")
 
     elif "answer" in result:
-        # API response
-        lines.append(f"Query: {result.get('query', 'N/A')}")
-        lines.append(f"Steps: {result.get('steps', 0)}")
-        lines.append("")
-        lines.append(result["answer"])
+        # Parse JSON answer
+        try:
+            answer_data = json.loads(result["answer"])
+            lines.append(f"Website/Service: {answer_data.get('Website/Service', 'N/A')}")
+            lines.append("")
+            lines.append(f"Explanation: {answer_data.get('Explanation', 'N/A')}")
+            lines.append("")
+            lines.append("Query Results:")
+            lines.append("-" * 60)
+            lines.append(answer_data.get('Query Results', 'N/A'))
+        except json.JSONDecodeError:
+            # Fallback to raw output
+            lines.append(result["answer"])
 
     elif result.get("type") == "exact":
+        lines.append(f"Website/Service: {result['domain']}")
+        lines.append("")
+        lines.append(f"Explanation: SNI {result['sni']} belongs to {result['domain']}")
+        lines.append("")
+        lines.append("Query Results:")
+        lines.append("-" * 60)
         lines.append(f"SNI: {result['sni']}")
         lines.append(f"Domain: {result['domain']}")
         lines.append(f"Protocols: {', '.join(result.get('protocols', []))}")
@@ -86,17 +101,25 @@ def format_result(result: dict) -> str:
             lines.append(f"Related SNIs: {', '.join(result['related_snis'][:5])}")
 
     elif result.get("type") == "vector":
-        lines.append(f"Query: {result['query']}")
-        lines.append("Similar SNIs found:")
+        lines.append(f"Website/Service: Multiple matches found")
+        lines.append("")
+        lines.append(f"Explanation: Found similar SNIs for query '{result['query']}'")
+        lines.append("")
+        lines.append("Query Results:")
+        lines.append("-" * 60)
         for match in result.get("matches", []):
             lines.append(
                 f"  - {match['sni']} (domain: {match['domain']}, score: {match['score']})"
             )
 
     elif result.get("type") == "not_found":
-        lines.append(f"SNI '{result['sni']}' not found in database")
+        lines.append(f"Website/Service: Unknown")
+        lines.append("")
+        lines.append(f"Explanation: SNI '{result['sni']}' not found in database")
+        lines.append("")
+        lines.append("Query Results: No results")
 
-    lines.append("-" * 50)
+    lines.append("=" * 60)
     return "\n".join(lines)
 
 
