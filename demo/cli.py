@@ -18,13 +18,16 @@ from src.config import settings
 
 
 API_URL = f"http://localhost:{settings.API_PORT}"
+USE_AGENT_MODE = True  # Set to True to use agent mode (LLM actively calls tools)
 
 
 def query_via_api(sni: str) -> dict:
     """Query SNI via API server."""
+    endpoint = "/api/query/agent" if USE_AGENT_MODE else "/api/query"
+
     try:
         response = requests.post(
-            f"{API_URL}/api/query",
+            f"{API_URL}{endpoint}",
             json={"query": sni},
             timeout=60,
         )
@@ -135,7 +138,9 @@ def main():
         resp = requests.get(f"{API_URL}/api/health", timeout=2)
         if resp.status_code == 200:
             use_api = True
-            print(f"Mode: API (server running at {API_URL})")
+            mode_name = "Agent (LLM actively calls tools)" if USE_AGENT_MODE else "Workflow (fixed steps)"
+            print(f"Mode: API - {mode_name}")
+            print(f"Server: {API_URL}")
     except Exception:
         pass
 

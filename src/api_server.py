@@ -17,19 +17,24 @@ from src.tools import SNITools
 
 # Global instances
 sni_graph = None
+sni_agent = None
 sni_tools = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
-    global sni_graph, sni_tools
+    global sni_graph, sni_agent, sni_tools
 
     # Startup
     print("Initializing SNI RAG system...")
     sni_graph = create_sni_graph()
+
+    from src.agent import create_sni_agent
+    sni_agent = create_sni_agent()
+
     sni_tools = SNITools()
-    print("SNI RAG system initialized")
+    print("SNI RAG system initialized (both workflow and agent modes)")
 
     yield
 
@@ -118,7 +123,7 @@ async def health_check():
 
 @app.post("/api/query", response_model=QueryResponse)
 async def query_sni_endpoint(request: QueryRequest):
-    """Query SNI using LangGraph RAG.
+    """Query SNI using LangGraph RAG (fixed workflow).
 
     This endpoint uses the full LangGraph workflow to understand
     the query, select appropriate tools, and generate an answer.
@@ -135,6 +140,39 @@ async def query_sni_endpoint(request: QueryRequest):
             query=request.query,
             app=sni_graph,
             session_id=session_id,
+        )
+
+        return QueryResponse(
+            query=request.query,
+            answer=result.get("answer", "No answer generated"),
+            session_id=session_id,
+            steps=result.get("steps", 0),
+            tool_calls=result.get("tool_calls", []),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/query/agent", response_model=QueryResponse)
+async def query_sni_agent_endpoint(request: QueryRequest):
+    """Query SNI using Agent (LLM actively calls tools).
+
+    This endpoint uses an agent where the LLM actively decides
+    which tools to call based on the user query.
+    """
+    global sni_agent
+
+    if sni_agent is None:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+
+    session_id = request.session_id or str(uuid.uuid4())
+
+    try:
+        from src.graph import aquery_sni_with_agent
+
+        result = await aquery_sni_with_agent(
+            query=request.query,
+            agent=sni_agent,
         )
 
         return QueryResponse(

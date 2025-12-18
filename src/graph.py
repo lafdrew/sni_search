@@ -213,15 +213,76 @@ def visualize_graph(output_path: str = "sni_graph.png"):
         print(mermaid_code)
 
 
+def query_sni_with_agent(
+    query: str,
+    agent=None,
+) -> dict:
+    """Execute SNI query using agent (LLM actively calls tools).
+
+    Args:
+        query: User query string
+        agent: Pre-created agent instance (optional)
+
+    Returns:
+        Query result dictionary
+    """
+    from src.agent import create_sni_agent
+
+    if agent is None:
+        agent = create_sni_agent()
+
+    result = agent.query(query)
+
+    return {
+        "query": query,
+        "answer": result.get("answer"),
+        "tool_calls": result.get("tool_calls", []),
+        "steps": result.get("iterations", 0),
+    }
+
+
+async def aquery_sni_with_agent(
+    query: str,
+    agent=None,
+) -> dict:
+    """Execute SNI query asynchronously using agent (LLM actively calls tools).
+
+    Args:
+        query: User query string
+        agent: Pre-created agent instance (optional)
+
+    Returns:
+        Query result dictionary
+    """
+    from src.agent import create_sni_agent
+
+    if agent is None:
+        agent = create_sni_agent()
+
+    result = await agent.aquery(query)
+
+    return {
+        "query": query,
+        "answer": result.get("answer"),
+        "tool_calls": result.get("tool_calls", []),
+        "steps": result.get("iterations", 0),
+    }
+
+
 if __name__ == "__main__":
     # Example usage
     import asyncio
 
     async def main():
+        print("=== Testing StateGraph (fixed workflow) ===")
         app = create_sni_graph()
-
-        # Test query
         result = await aquery_sni("www.google.com", app=app)
+        print(f"Answer: {result['answer']}")
+        print(f"Steps: {result['steps']}")
+        print(f"Tool calls: {result['tool_calls']}")
+
+        print("\n=== Testing Agent (LLM actively calls tools) ===")
+        result = await aquery_sni_with_agent("www.google.com")
         print(f"Answer: {result['answer']}")
         print(f"Steps: {result['steps']}")
         print(f"Tool calls: {result['tool_calls']}")
