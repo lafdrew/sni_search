@@ -1,0 +1,222 @@
+ sni_search  uv run python .\demo\test_multi_round_search.py
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "output_schema" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "stream" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+2025-12-26 14:13:49,928 - __main__ - INFO - ================================================================================
+2025-12-26 14:13:49,929 - __main__ - INFO - Testing Multi-Round Iterative Search Workflow
+2025-12-26 14:13:49,929 - __main__ - INFO - ================================================================================
+2025-12-26 14:13:49,929 - __main__ - INFO -
+Test Query: poi.18gps.net
+
+2025-12-26 14:13:49,929 - src.graph.builder - INFO - [create_sni_graph] Building multi-round SNI search workflow
+2025-12-26 14:13:49,950 - httpx - INFO - HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-12-26 14:13:49,955 - src.graph.builder - INFO - [_create_llm] Creating OpenAI LLM: gpt-5.1-chat-latest
+2025-12-26 14:13:50,074 - src.graph.builder - INFO - [create_sni_graph] Multi-round workflow compiled successfully
+2025-12-26 14:13:50,074 - src.graph.builder - INFO -
+    New workflow structure:
+
+    START → sni_exact_query
+              ↓
+              ├─[has results]─→ synthesize → END
+              └─[no results]──→ vector_search
+                                  ↓
+                                  initial_web_search (direct SNI search)
+                                  ↓
+                                  round1_planning (LLM generates 4 queries)
+                                  ↓
+                                  round1_search (4 parallel searches)
+                                  ↓
+                                  round2_planning (LLM extracts 2 keywords)
+                                  ↓
+                                  round2_search (2 parallel searches)
+                                  ↓
+                                  final_planning (LLM generates final query)
+                                  ↓
+                                  final_search (1 comprehensive search)
+                                  ↓
+                                  synthesize → END
+
+    Total: Up to 8 web searches (1 initial + 4 round1 + 2 round2 + 1 final)
+
+2025-12-26 14:13:50,075 - __main__ - INFO - Starting multi-round workflow execution...
+
+2025-12-26 14:13:50,076 - src.graph.nodes - INFO - [sni_exact_query_node] Querying exact match for: poi.18gps.net
+2025-12-26 14:13:50,095 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/scroll "HTTP/1.1 200 OK"
+2025-12-26 14:13:50,096 - src.graph.nodes - INFO - [sni_exact_query_node] Found 2 results
+2025-12-26 14:13:50,096 - src.graph.nodes - INFO - [Decision] No exact results → try vector search
+2025-12-26 14:13:50,097 - src.graph.nodes - INFO - [sni_vector_query_node] Querying vector similarity for: poi.18gps.net
+2025-12-26 14:13:50,098 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2025-12-26 14:13:50,098 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 55.33it/s]
+2025-12-26 14:13:55,372 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/query "HTTP/1.1 200 OK"
+2025-12-26 14:13:55,373 - src.graph.nodes - INFO - [sni_vector_query_node] Found 5 results
+2025-12-26 14:13:55,374 - src.graph.nodes - INFO - [initial_web_search_node] Crawling homepage for: poi.18gps.net
+2025-12-26 14:13:55,374 - src.graph.nodes - INFO - [initial_web_search_node] Trying HTTPS: https://poi.18gps.net
+2025-12-26 14:13:55,376 - src.tools.crawler.crawler - INFO - Selecting Jina crawler engine
+2025-12-26 14:13:55,376 - src.tools.crawler.crawler - INFO - Crawling URL: https://poi.18gps.net using JinaClient
+2025-12-26 14:13:55,376 - src.tools.crawler.jina_client - WARNING - Jina API key is not set. Provide your own key to access a higher rate limit. See https://jina.ai/reader for more information.
+2025-12-26 14:13:57,119 - src.tools.crawler.jina_client - ERROR - Jina API returned empty response
+2025-12-26 14:13:57,121 - src.tools.crawler.crawler - WARNING - Non-HTML content received from URL https://poi.18gps.net, creating fallback article
+2025-12-26 14:13:57,121 - src.graph.nodes - INFO - [initial_web_search_node] Successfully crawled via HTTPS (129 chars, title: 'Non-HTML Content')
+2025-12-26 14:13:57,122 - src.graph.nodes - INFO - [round1_planning_node] Generating round 1 queries for: poi.18gps.net
+2025-12-26 14:13:57,575 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:14:02,364 - src.graph.nodes - INFO - [round1_planning_node] Generated queries: ['Identify the service or application that uses the domain poi.18gps.net and determine the company or organization operating it', 'Retrieve technical details about poi.18gps.net including TLS certificates, hosting provider, CDN usage, protocols, and infrastructure to infer its service purpose', 'List domains related to or associated with poi.18gps.net to understand its ecosystem and determine what category of service it belongs to', 'Determine the typical user activities, features, or data accessed through poi.18gps.net to identify the service it represents']
+2025-12-26 14:14:02,364 - src.graph.nodes - INFO - [round1_planning_node] Reasoning: The queries target four angles: owner/service identification, technical infrastructure clues, related domains for category inference, and user-oriented functionality to deduce the service represented by the SNI.
+2025-12-26 14:14:02,365 - src.graph.nodes - INFO - [round1_parallel_search_node] Executing 4 parallel searches
+2025-12-26 14:14:02,366 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:14:02,367 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:14:02,367 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:14:02,367 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:14:02,367 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:14:02,367 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: Identify the service or application that uses the domain poi.18gps.net and determine the company or organization operating it
+2025-12-26 14:14:02,367 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: Retrieve technical details about poi.18gps.net including TLS certificates, hosting provider, CDN usage, protocols, and infrastructure to infer its service purpose
+2025-12-26 14:14:02,368 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: List domains related to or associated with poi.18gps.net to understand its ecosystem and determine what category of service it belongs to
+2025-12-26 14:14:02,368 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: Determine the typical user activities, features, or data accessed through poi.18gps.net to identify the service it represents
+2025-12-26 14:14:03,666 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 14:14:04,611 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 0 results
+2025-12-26 14:14:05,032 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 14:14:05,462 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 14:14:05,463 - src.graph.nodes - INFO - [round1_parallel_search_node] Completed 4/4 searches
+2025-12-26 14:14:05,463 - src.graph.nodes - INFO - [round2_planning_node] Extracting keywords from 4 results
+2025-12-26 14:14:05,619 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:14:09,217 - src.graph.nodes - INFO - [round2_planning_node] Extracted keywords: ['18gps', 'GPS']
+2025-12-26 14:14:09,217 - src.graph.nodes - INFO - [round2_planning_node] Reasoning: The domain repeatedly aligns with GPS-related functionality and the 18gps name likely identifies the operating service or company, making these the strongest identifiers for determining the service behind the SNI.
+2025-12-26 14:14:09,218 - src.graph.nodes - INFO - [round2_parallel_search_node] Executing 2 parallel searches
+2025-12-26 14:14:09,219 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:14:09,219 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:14:09,219 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:14:09,219 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:14:09,219 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:14:09,219 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: 18gps
+2025-12-26 14:14:09,220 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: GPS
+2025-12-26 14:14:11,948 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 9 results
+2025-12-26 14:14:15,987 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 9 results
+2025-12-26 14:14:15,988 - src.graph.nodes - INFO - [round2_parallel_search_node] Completed 2/2 searches
+2025-12-26 14:14:15,988 - src.graph.nodes - INFO - [final_search_planning_node] Generating final search query
+2025-12-26 14:14:15,988 - src.graph.nodes - INFO - [final_search_planning_node] Context size: 1961 chars
+2025-12-26 14:14:16,419 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:14:20,381 - src.graph.nodes - INFO - [final_search_planning_node] Final query: poi.18gps.net "18gps" "星云" "GPS tracking" "poi" "API" "platform" site:18gps.net OR site:gps18.com OR "星云" "车辆定位" documentation
+2025-12-26 14:14:20,381 - src.graph.nodes - INFO - [final_search_planning_node] Reasoning: This query targets the parent services 18gps.net and gps18.com, the operator name 星云 (the company running the large vehicle GPS tracking platform), the subdomain poi, and seeks API or platform documentation. It narrows results to authoritative domains and terms directly tied to the service, increasing the likelihood of identifying precisely what the poi.18gps.net endpoint is used for within the GPS tracking ecosystem.
+2025-12-26 14:14:20,381 - src.graph.nodes - INFO - [final_search_node] Executing final search: poi.18gps.net "18gps" "星云" "GPS tracking" "poi" "API" "platform" site:18gps.net OR site:gps18.com OR "星云" "车辆定 位" documentation
+2025-12-26 14:14:20,383 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:14:20,383 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:14:20,383 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:14:20,383 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:14:20,383 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:14:22,914 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 0 results
+2025-12-26 14:14:22,914 - src.graph.nodes - INFO - [final_search_node] Final search completed
+2025-12-26 14:14:22,915 - src.graph.nodes - INFO - [synthesize_node] Synthesizing final answer from all sources
+2025-12-26 14:14:22,915 - src.graph.nodes - INFO - [synthesize_node] Context size: 3022 chars
+2025-12-26 14:14:23,075 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:14:27,414 - src.graph.nodes - INFO - [synthesize_node] Generated comprehensive answer from 6 sources
+2025-12-26 14:14:27,415 - __main__ - INFO -
+================================================================================
+2025-12-26 14:14:27,415 - __main__ - INFO - WORKFLOW EXECUTION RESULTS
+2025-12-26 14:14:27,415 - __main__ - INFO - ================================================================================
+2025-12-26 14:14:27,415 - __main__ - INFO -
+Original Query: poi.18gps.net
+2025-12-26 14:14:27,415 - __main__ - INFO -
+[1] Exact Match: Found 0 matches
+2025-12-26 14:14:27,415 - __main__ - INFO -
+[2] Vector Search: 5 results
+2025-12-26 14:14:27,415 - __main__ - INFO -   1. SNI: ssp.24smi.net, Domain: readli.net, Score: 0.763
+2025-12-26 14:14:27,416 - __main__ - INFO -   2. SNI: ssp.24smi.net, Domain: aif.ru, Score: 0.763
+2025-12-26 14:14:27,416 - __main__ - INFO -   3. SNI: i18n-pglstatp.com, Domain: i18n-pglstatp.com, Score: 0.749
+2025-12-26 14:14:27,416 - __main__ - INFO -
+[3] Initial Web Search: Completed (129 chars)
+2025-12-26 14:14:27,416 - __main__ - INFO -   Preview: # Non-HTML Content
+
+This URL returned content that cannot be parsed as HTML. Raw content: Error: Jina API returned empty response...
+2025-12-26 14:14:27,416 - __main__ - INFO -
+[4] Round 1 Planning: Generated 4 queries
+2025-12-26 14:14:27,416 - __main__ - INFO -   1. Identify the service or application that uses the domain poi.18gps.net and determine the company or organization operating it
+2025-12-26 14:14:27,416 - __main__ - INFO -   2. Retrieve technical details about poi.18gps.net including TLS certificates, hosting provider, CDN usage, protocols, and infrastructure to infer its service purpose  
+2025-12-26 14:14:27,416 - __main__ - INFO -   3. List domains related to or associated with poi.18gps.net to understand its ecosystem and determine what category of service it belongs to
+2025-12-26 14:14:27,416 - __main__ - INFO -   4. Determine the typical user activities, features, or data accessed through poi.18gps.net to identify the service it represents
+2025-12-26 14:14:27,417 - __main__ - INFO -
+[5] Round 1 Search: Completed 4/4 searches
+2025-12-26 14:14:27,417 - __main__ - INFO -   1. Identify the service or application that uses the domain poi.18gps.net and determine the company or organization operating it: Success
+2025-12-26 14:14:27,417 - __main__ - INFO -   2. Retrieve technical details about poi.18gps.net including TLS certificates, hosting provider, CDN usage, protocols, and infrastructure to infer its service purpose: Success
+2025-12-26 14:14:27,417 - __main__ - INFO -   3. List domains related to or associated with poi.18gps.net to understand its ecosystem and determine what category of service it belongs to: Success
+2025-12-26 14:14:27,417 - __main__ - INFO -   4. Determine the typical user activities, features, or data accessed through poi.18gps.net to identify the service it represents: Success
+2025-12-26 14:14:27,417 - __main__ - INFO -
+[6] Round 2 Planning: Extracted 2 keywords
+2025-12-26 14:14:27,417 - __main__ - INFO -   1. 18gps
+2025-12-26 14:14:27,417 - __main__ - INFO -   2. GPS
+2025-12-26 14:14:27,417 - __main__ - INFO -
+[7] Round 2 Search: Completed 2/2 searches
+2025-12-26 14:14:27,418 - __main__ - INFO -   1. 18gps: Success
+2025-12-26 14:14:27,418 - __main__ - INFO -   2. GPS: Success
+2025-12-26 14:14:27,418 - __main__ - INFO -
+[8] Final Search Planning: poi.18gps.net "18gps" "星云" "GPS tracking" "poi" "API" "platform" site:18gps.net OR site:gps18.com OR "星云" "车辆定位" documentation
+2025-12-26 14:14:27,418 - __main__ - INFO -
+[9] Final Search: Completed (2 chars)
+2025-12-26 14:14:27,418 - __main__ - INFO -   Preview: []...
+2025-12-26 14:14:27,418 - __main__ - INFO -
+[10] Final Answer Synthesis:
+2025-12-26 14:14:27,418 - __main__ - INFO -   {
+  "tgt": "18GPS (星云) Vehicle GPS Tracking Platform",
+  "Explanation": "This subdomain belongs to 18GPS, a large Chinese GPS vehicle‑tracking and fleet‑management system used for real‑time positioning, monitoring, and management of vehicles. The poi.18gps.net host likely serves point‑of‑interest (POI) map or location‑data functions within the platform.",
+  "Query Results": "Search results show that 18gps.net is the official website of 星云, described as one of the largest global GPS vehicle‑track...
+2025-12-26 14:14:27,418 - __main__ - INFO -
+================================================================================
+2025-12-26 14:14:27,419 - __main__ - INFO - TEST SUMMARY
+2025-12-26 14:14:27,419 - __main__ - INFO - ================================================================================
+2025-12-26 14:14:27,419 - __main__ - INFO -
+Total Web Searches Executed: 8/8
+2025-12-26 14:14:27,419 - __main__ - INFO - Success Criteria Met: 6/6
+2025-12-26 14:14:27,419 - __main__ - INFO -
+Criteria:
+2025-12-26 14:14:27,419 - __main__ - INFO -   - Vector search completed
+2025-12-26 14:14:27,420 - __main__ - INFO -   - Initial web search completed
+2025-12-26 14:14:27,421 - __main__ - INFO -   - Round 1: 4/4 searches completed
+2025-12-26 14:14:27,421 - __main__ - INFO -   - Round 2: 2/2 searches completed
+2025-12-26 14:14:27,421 - __main__ - INFO -   - Final search completed
+2025-12-26 14:14:27,421 - __main__ - INFO -   - Final answer synthesized
+2025-12-26 14:14:27,421 - __main__ - INFO -
+================================================================================
+2025-12-26 14:14:27,422 - __main__ - INFO - WORKFLOW PERFORMANCE
+2025-12-26 14:14:27,422 - __main__ - INFO - ================================================================================
+2025-12-26 14:14:27,422 - __main__ - INFO -
+Search Depth: 8 rounds
+2025-12-26 14:14:27,423 - __main__ - INFO - Query Diversification: Round 1 used 4 different angles
+2025-12-26 14:14:27,423 - __main__ - INFO - Keyword Refinement: Round 2 focused on 2 core topics
+2025-12-26 14:14:27,423 - __main__ - INFO - Comprehensive Coverage: Yes
+2025-12-26 14:14:27,423 - __main__ - INFO -

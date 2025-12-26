@@ -1,0 +1,41 @@
+# ============================================
+# 团队共享配置 - conf.yaml
+# 工具详细参数、非敏感配置
+# ============================================
+
+# 搜索引擎详细配置
+SEARCH_ENGINE:
+  # 域名过滤
+  include_domains: []          # 只搜索这些域名
+  exclude_domains: []          # 排除这些域名
+
+  # Tavily 搜索参数
+  include_answer: false        # 是否包含 AI 生成的答案
+  search_depth: "advanced"     # 搜索深度: "basic" 或 "advanced"
+  include_raw_content: true    # 包含原始内容
+  include_images: true         # 包含图片
+  include_image_descriptions: true  # 包含图片描述
+
+  # InfoQuest 搜索参数
+  time_range: -1              # 时间范围（天），-1 表示不限制
+  site: ""                    # 限制特定站点，空字符串表示不限制
+
+  # SearchApi 搜索参数
+  engine: "google"            # SearchApi 搜索引擎: "google", "bing", "yahoo" 等
+
+  # 结果后处理参数
+  min_score_threshold: 0.0    # 最低相关性分数（0.0-1.0）
+  max_content_length_per_page: 5000  # 每页内容最大长度
+
+  # Wikipedia 搜索参数
+  wikipedia_lang: "en"        # Wikipedia 语言
+  wikipedia_doc_content_chars_max: 4000  # 文档内容最大字符数
+
+# 爬虫引擎详细配置
+CRAWLER_ENGINE:
+  engine: "jina"         # 爬虫引擎: "jina" 或 "infoquest"
+
+  # InfoQuest 爬虫超时参数（仅在 engine=infoquest 时有效）
+  fetch_time: 10              # 获取超时（秒），-1 表示不限制
+  timeout: 30                 # 总超时（秒），-1 表示不限制
+  navi_timeout: 15            # 导航超时（秒），-1 表示不限制

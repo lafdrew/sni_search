@@ -1,0 +1,231 @@
+ sni_search  uv run python .\demo\test_multi_round_search.py
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "output_schema" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "stream" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+2025-12-26 14:18:08,997 - __main__ - INFO - ================================================================================
+2025-12-26 14:18:08,997 - __main__ - INFO - Testing Multi-Round Iterative Search Workflow
+2025-12-26 14:18:08,997 - __main__ - INFO - ================================================================================
+2025-12-26 14:18:08,997 - __main__ - INFO -
+Test Query: api.farnav.cn
+
+2025-12-26 14:18:08,997 - src.graph.builder - INFO - [create_sni_graph] Building multi-round SNI search workflow
+2025-12-26 14:18:09,035 - httpx - INFO - HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-12-26 14:18:09,041 - src.graph.builder - INFO - [_create_llm] Creating OpenAI LLM: gpt-5.1-chat-latest
+2025-12-26 14:18:09,177 - src.graph.builder - INFO - [create_sni_graph] Multi-round workflow compiled successfully
+2025-12-26 14:18:09,177 - src.graph.builder - INFO -
+    New workflow structure:
+
+    START → sni_exact_query
+              ↓
+              ├─[has results]─→ synthesize → END
+              └─[no results]──→ vector_search
+                                  ↓
+                                  initial_web_search (direct SNI search)
+                                  ↓
+                                  round1_planning (LLM generates 4 queries)
+                                  ↓
+                                  round1_search (4 parallel searches)
+                                  ↓
+                                  round2_planning (LLM extracts 2 keywords)
+                                  ↓
+                                  round2_search (2 parallel searches)
+                                  ↓
+                                  final_planning (LLM generates final query)
+                                  ↓
+                                  final_search (1 comprehensive search)
+                                  ↓
+                                  synthesize → END
+
+    Total: Up to 8 web searches (1 initial + 4 round1 + 2 round2 + 1 final)
+
+2025-12-26 14:18:09,178 - __main__ - INFO - Starting multi-round workflow execution...
+
+2025-12-26 14:18:09,179 - src.graph.nodes - INFO - [sni_exact_query_node] Querying exact match for: api.farnav.cn
+2025-12-26 14:18:09,184 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/scroll "HTTP/1.1 200 OK"
+2025-12-26 14:18:09,185 - src.graph.nodes - INFO - [sni_exact_query_node] Found 2 results
+2025-12-26 14:18:09,185 - src.graph.nodes - INFO - [Decision] No exact results → try vector search
+2025-12-26 14:18:09,186 - src.graph.nodes - INFO - [sni_vector_query_node] Querying vector similarity for: api.farnav.cn
+2025-12-26 14:18:09,187 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2025-12-26 14:18:09,187 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 58.82it/s]
+2025-12-26 14:18:15,971 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/query "HTTP/1.1 200 OK"
+2025-12-26 14:18:15,972 - src.graph.nodes - INFO - [sni_vector_query_node] Found 5 results
+2025-12-26 14:18:15,972 - src.graph.nodes - INFO - [initial_web_search_node] Crawling homepage for: api.farnav.cn
+2025-12-26 14:18:15,972 - src.graph.nodes - INFO - [initial_web_search_node] Trying HTTPS: https://api.farnav.cn
+2025-12-26 14:18:15,974 - src.tools.crawler.crawler - INFO - Selecting Jina crawler engine
+2025-12-26 14:18:15,974 - src.tools.crawler.crawler - INFO - Crawling URL: https://api.farnav.cn using JinaClient
+2025-12-26 14:18:15,974 - src.tools.crawler.jina_client - WARNING - Jina API key is not set. Provide your own key to access a higher rate limit. See https://jina.ai/reader for more information.
+Warning: A working NPM installation was not found. The package will use Python-based article extraction.
+Warning: node executable not found, reverting to pure-Python mode. Install Node.js v10 or newer to use Readability.js.
+2025-12-26 14:18:18,187 - src.graph.nodes - INFO - [initial_web_search_node] Successfully crawled via HTTPS (170 chars, title: '400 Request Header Or Cookie Too Large')
+2025-12-26 14:18:18,187 - src.graph.nodes - INFO - [round1_planning_node] Generating round 1 queries for: api.farnav.cn
+2025-12-26 14:18:18,638 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:18:21,604 - src.graph.nodes - INFO - [round1_planning_node] Generated queries: ['api.farnav.cn belongs to which company or application and what service does this API endpoint provide', 'technical scan of api.farnav.cn including TLS certificates, supported protocols, hosting provider, and CDN to identify the service type', 'related or sibling domains of farnav.cn and api.farnav.cn to determine the ecosystem and service category', 'typical user functions or app features that rely on api.farnav.cn and what purpose the API serves']
+2025-12-26 14:18:21,604 - src.graph.nodes - INFO - [round1_planning_node] Reasoning: Queries target organizational identity, technical infrastructure, domain ecosystem, and real‑world usage patterns to infer what service the SNI represents.
+2025-12-26 14:18:21,604 - src.graph.nodes - INFO - [round1_parallel_search_node] Executing 4 parallel searches
+2025-12-26 14:18:21,605 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:18:21,605 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:18:21,606 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:18:21,606 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:18:21,606 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:18:21,606 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: api.farnav.cn belongs to which company or application and what service does this API endpoint provide
+2025-12-26 14:18:21,606 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: technical scan of api.farnav.cn including TLS certificates, supported protocols, hosting provider, and CDN to identify the service type
+2025-12-26 14:18:21,607 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: related or sibling domains of farnav.cn and api.farnav.cn to determine the ecosystem and service category
+2025-12-26 14:18:21,607 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: typical user functions or app features that rely on api.farnav.cn and what purpose the API serves
+2025-12-26 14:18:23,605 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 1 results
+2025-12-26 14:18:24,160 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 7 results
+2025-12-26 14:18:24,854 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 14:18:26,763 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 14:18:26,763 - src.graph.nodes - INFO - [round1_parallel_search_node] Completed 4/4 searches
+2025-12-26 14:18:26,763 - src.graph.nodes - INFO - [round2_planning_node] Extracting keywords from 4 results
+2025-12-26 14:18:27,242 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:18:31,809 - src.graph.nodes - INFO - [round2_planning_node] Extracted keywords: ['farnav', 'api']
+2025-12-26 14:18:31,809 - src.graph.nodes - INFO - [round2_planning_node] Reasoning: The only identifiable and repeated elements tied to the service across all queries are the domain-specific string 'farnav' and the functional descriptor 'api'. No search result provides external identifiers, so these two terms are the most important for locating the operator, ecosystem, or official documentation.
+2025-12-26 14:18:31,810 - src.graph.nodes - INFO - [round2_parallel_search_node] Executing 2 parallel searches
+2025-12-26 14:18:31,812 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:18:31,812 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:18:31,812 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:18:31,812 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:18:31,812 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:18:31,812 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: farnav
+2025-12-26 14:18:31,812 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: api
+2025-12-26 14:18:34,114 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 9 results
+2025-12-26 14:18:34,542 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 9 results
+2025-12-26 14:18:34,542 - src.graph.nodes - INFO - [round2_parallel_search_node] Completed 2/2 searches
+2025-12-26 14:18:34,542 - src.graph.nodes - INFO - [final_search_planning_node] Generating final search query
+2025-12-26 14:18:34,543 - src.graph.nodes - INFO - [final_search_planning_node] Context size: 2301 chars
+2025-12-26 14:18:34,699 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:18:37,505 - src.graph.nodes - INFO - [final_search_planning_node] Final query: api.farnav.cn service identification farnav.cn operator company official documentation Chinese app aviation navigation API endpoint TLS certificate WHOIS ICP备案
+2025-12-26 14:18:37,505 - src.graph.nodes - INFO - [final_search_planning_node] Reasoning: This query directly targets the domain and SNI while adding terms for operator identification, Chinese regulatory listings, aviation-navigation relevance suggested by 'farnav', and authoritative sources such as WHOIS, TLS certificate records, and ICP filings which reliably reveal the owning company and service purpose.
+2025-12-26 14:18:37,506 - src.graph.nodes - INFO - [final_search_node] Executing final search: api.farnav.cn service identification farnav.cn operator company official documentation Chinese app aviation navigation API endpoint TLS certificate WHOIS ICP备案
+2025-12-26 14:18:37,507 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:18:37,508 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:18:37,508 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:18:37,508 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:18:37,509 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:18:39,450 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 0 results
+2025-12-26 14:18:39,451 - src.graph.nodes - INFO - [final_search_node] Final search completed
+2025-12-26 14:18:39,451 - src.graph.nodes - INFO - [synthesize_node] Synthesizing final answer from all sources
+2025-12-26 14:18:39,451 - src.graph.nodes - INFO - [synthesize_node] Context size: 3399 chars
+2025-12-26 14:18:39,611 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:18:43,278 - src.graph.nodes - INFO - [synthesize_node] Generated comprehensive answer from 6 sources
+2025-12-26 14:18:43,279 - __main__ - INFO -
+================================================================================
+2025-12-26 14:18:43,279 - __main__ - INFO - WORKFLOW EXECUTION RESULTS
+2025-12-26 14:18:43,279 - __main__ - INFO - ================================================================================
+2025-12-26 14:18:43,279 - __main__ - INFO -
+Original Query: api.farnav.cn
+2025-12-26 14:18:43,279 - __main__ - INFO -
+[1] Exact Match: Found 0 matches
+2025-12-26 14:18:43,279 - __main__ - INFO -
+[2] Vector Search: 5 results
+2025-12-26 14:18:43,279 - __main__ - INFO -   1. SNI: api.srv.jpush.cn, Domain: jpush.cn, Score: 0.821
+2025-12-26 14:18:43,279 - __main__ - INFO -   2. SNI: api.srv.jpush.cn, Domain: jpush.cn, Score: 0.821
+2025-12-26 14:18:43,279 - __main__ - INFO -   3. SNI: api.ipdata.co, Domain: onesignal.com, Score: 0.779
+2025-12-26 14:18:43,280 - __main__ - INFO -
+[3] Initial Web Search: Completed (170 chars)
+2025-12-26 14:18:43,280 - __main__ - INFO -   Preview: # 400 Request Header Or Cookie Too Large
+
+<p>400 Request Header Or Cookie Too Large</p>
+
+400 Bad Request
+===============
+
+Request Header Or Cookie Too Large
+
+nginx/1.20.1...
+2025-12-26 14:18:43,280 - __main__ - INFO -
+[4] Round 1 Planning: Generated 4 queries
+2025-12-26 14:18:43,280 - __main__ - INFO -   1. api.farnav.cn belongs to which company or application and what service does this API endpoint provide
+2025-12-26 14:18:43,281 - __main__ - INFO -   2. technical scan of api.farnav.cn including TLS certificates, supported protocols, hosting provider, and CDN to identify the service type
+2025-12-26 14:18:43,281 - __main__ - INFO -   3. related or sibling domains of farnav.cn and api.farnav.cn to determine the ecosystem and service category
+2025-12-26 14:18:43,281 - __main__ - INFO -   4. typical user functions or app features that rely on api.farnav.cn and what purpose the API serves
+2025-12-26 14:18:43,281 - __main__ - INFO -
+[5] Round 1 Search: Completed 4/4 searches
+2025-12-26 14:18:43,281 - __main__ - INFO -   1. api.farnav.cn belongs to which company or application and what service does this API endpoint provide: Success
+2025-12-26 14:18:43,281 - __main__ - INFO -   2. technical scan of api.farnav.cn including TLS certificates, supported protocols, hosting provider, and CDN to identify the service type: Success
+2025-12-26 14:18:43,281 - __main__ - INFO -   3. related or sibling domains of farnav.cn and api.farnav.cn to determine the ecosystem and service category: Success
+2025-12-26 14:18:43,281 - __main__ - INFO -   4. typical user functions or app features that rely on api.farnav.cn and what purpose the API serves: Success
+2025-12-26 14:18:43,281 - __main__ - INFO -
+[6] Round 2 Planning: Extracted 2 keywords
+2025-12-26 14:18:43,281 - __main__ - INFO -   1. farnav
+2025-12-26 14:18:43,282 - __main__ - INFO -   2. api
+2025-12-26 14:18:43,282 - __main__ - INFO -
+[7] Round 2 Search: Completed 2/2 searches
+2025-12-26 14:18:43,282 - __main__ - INFO -   1. farnav: Success
+2025-12-26 14:18:43,282 - __main__ - INFO -   2. api: Success
+2025-12-26 14:18:43,282 - __main__ - INFO -
+[8] Final Search Planning: api.farnav.cn service identification farnav.cn operator company official documentation Chinese app aviation navigation API endpoint TLS certificate WHOIS ICP备案
+2025-12-26 14:18:43,283 - __main__ - INFO -
+[9] Final Search: Completed (2 chars)
+2025-12-26 14:18:43,283 - __main__ - INFO -   Preview: []...
+2025-12-26 14:18:43,283 - __main__ - INFO -
+[10] Final Answer Synthesis:
+2025-12-26 14:18:43,283 - __main__ - INFO -   {
+  "tgt": "Unknown",
+  "Explanation": "No authoritative information identifies api.farnav.cn, and no evidence links it to a known company or service.",
+  "Query Results": "The SNI had no exact match results, vector matches pointed only to unrelated API service domains such as jpush.cn and ipdata.co, and multiple rounds of web searches produced no information about farnav.cn or associated applications. Therefore the service, operator, and purpose of this domain remain unknown."
+}...
+2025-12-26 14:18:43,283 - __main__ - INFO -
+================================================================================
+2025-12-26 14:18:43,283 - __main__ - INFO - TEST SUMMARY
+2025-12-26 14:18:43,283 - __main__ - INFO - ================================================================================
+2025-12-26 14:18:43,283 - __main__ - INFO -
+Total Web Searches Executed: 8/8
+2025-12-26 14:18:43,283 - __main__ - INFO - Success Criteria Met: 6/6
+2025-12-26 14:18:43,283 - __main__ - INFO -
+Criteria:
+2025-12-26 14:18:43,283 - __main__ - INFO -   - Vector search completed
+2025-12-26 14:18:43,284 - __main__ - INFO -   - Initial web search completed
+2025-12-26 14:18:43,285 - __main__ - INFO -   - Round 1: 4/4 searches completed
+2025-12-26 14:18:43,285 - __main__ - INFO -   - Round 2: 2/2 searches completed
+2025-12-26 14:18:43,285 - __main__ - INFO -   - Final search completed
+2025-12-26 14:18:43,285 - __main__ - INFO -   - Final answer synthesized
+2025-12-26 14:18:43,285 - __main__ - INFO -
+================================================================================
+2025-12-26 14:18:43,286 - __main__ - INFO - WORKFLOW PERFORMANCE
+2025-12-26 14:18:43,286 - __main__ - INFO - ================================================================================
+2025-12-26 14:18:43,286 - __main__ - INFO -
+Search Depth: 8 rounds
+2025-12-26 14:18:43,287 - __main__ - INFO - Query Diversification: Round 1 used 4 different angles
+2025-12-26 14:18:43,287 - __main__ - INFO - Keyword Refinement: Round 2 focused on 2 core topics
+2025-12-26 14:18:43,287 - __main__ - INFO - Comprehensive Coverage: Yes
+2025-12-26 14:18:43,287 - __main__ - INFO -
+================================================================================

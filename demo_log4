@@ -1,0 +1,222 @@
+ sni_search  uv run python .\demo\test_multi_round_search.py
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "output_schema" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "stream" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+2025-12-26 14:15:38,723 - __main__ - INFO - ================================================================================
+2025-12-26 14:15:38,723 - __main__ - INFO - Testing Multi-Round Iterative Search Workflow
+2025-12-26 14:15:38,723 - __main__ - INFO - ================================================================================
+2025-12-26 14:15:38,723 - __main__ - INFO -
+Test Query: tclandroidicsapp.accu-weather.com
+
+2025-12-26 14:15:38,723 - src.graph.builder - INFO - [create_sni_graph] Building multi-round SNI search workflow
+2025-12-26 14:15:38,755 - httpx - INFO - HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-12-26 14:15:38,760 - src.graph.builder - INFO - [_create_llm] Creating OpenAI LLM: gpt-5.1-chat-latest
+2025-12-26 14:15:38,874 - src.graph.builder - INFO - [create_sni_graph] Multi-round workflow compiled successfully
+2025-12-26 14:15:38,874 - src.graph.builder - INFO -
+    New workflow structure:
+
+    START → sni_exact_query
+              ↓
+              ├─[has results]─→ synthesize → END
+              └─[no results]──→ vector_search
+                                  ↓
+                                  initial_web_search (direct SNI search)
+                                  ↓
+                                  round1_planning (LLM generates 4 queries)
+                                  ↓
+                                  round1_search (4 parallel searches)
+                                  ↓
+                                  round2_planning (LLM extracts 2 keywords)
+                                  ↓
+                                  round2_search (2 parallel searches)
+                                  ↓
+                                  final_planning (LLM generates final query)
+                                  ↓
+                                  final_search (1 comprehensive search)
+                                  ↓
+                                  synthesize → END
+
+    Total: Up to 8 web searches (1 initial + 4 round1 + 2 round2 + 1 final)
+
+2025-12-26 14:15:38,874 - __main__ - INFO - Starting multi-round workflow execution...
+
+2025-12-26 14:15:38,876 - src.graph.nodes - INFO - [sni_exact_query_node] Querying exact match for: tclandroidicsapp.accu-weather.com
+2025-12-26 14:15:38,896 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/scroll "HTTP/1.1 200 OK"
+2025-12-26 14:15:38,897 - src.graph.nodes - INFO - [sni_exact_query_node] Found 2 results
+2025-12-26 14:15:38,897 - src.graph.nodes - INFO - [Decision] No exact results → try vector search
+2025-12-26 14:15:38,898 - src.graph.nodes - INFO - [sni_vector_query_node] Querying vector similarity for: tclandroidicsapp.accu-weather.com
+2025-12-26 14:15:38,899 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2025-12-26 14:15:38,899 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 40.61it/s]
+2025-12-26 14:15:44,240 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/query "HTTP/1.1 200 OK"
+2025-12-26 14:15:44,241 - src.graph.nodes - INFO - [sni_vector_query_node] Found 5 results
+2025-12-26 14:15:44,241 - src.graph.nodes - INFO - [initial_web_search_node] Crawling homepage for: tclandroidicsapp.accu-weather.com
+2025-12-26 14:15:44,241 - src.graph.nodes - INFO - [initial_web_search_node] Trying HTTPS: https://tclandroidicsapp.accu-weather.com
+2025-12-26 14:15:44,243 - src.tools.crawler.crawler - INFO - Selecting Jina crawler engine
+2025-12-26 14:15:44,243 - src.tools.crawler.crawler - INFO - Crawling URL: https://tclandroidicsapp.accu-weather.com using JinaClient
+2025-12-26 14:15:44,243 - src.tools.crawler.jina_client - WARNING - Jina API key is not set. Provide your own key to access a higher rate limit. See https://jina.ai/reader for more information.
+2025-12-26 14:15:44,609 - src.tools.crawler.jina_client - ERROR - Jina API returned status 400: {"data":null,"path":"url","code":400,"name":"ParamValidationError","status":40001,"message":"Domain 'tclandroidicsapp.accu-weather.com' could not be resolved","readableMessage":"ParamValidationError(url): Domain 'tclandroidicsapp.accu-weather.com' could not be resolved"}
+2025-12-26 14:15:44,610 - src.tools.crawler.crawler - WARNING - Non-HTML content received from URL https://tclandroidicsapp.accu-weather.com, creating fallback article
+2025-12-26 14:15:44,611 - src.graph.nodes - INFO - [initial_web_search_node] Successfully crawled via HTTPS (398 chars, title: 'Non-HTML Content')
+2025-12-26 14:15:44,612 - src.graph.nodes - INFO - [round1_planning_node] Generating round 1 queries for: tclandroidicsapp.accu-weather.com
+2025-12-26 14:15:45,062 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:15:48,356 - src.graph.nodes - INFO - [round1_planning_node] Generated queries: ['What application or service uses the domain tclandroidicsapp.accu-weather.com and which company operates it?', 'What technical infrastructure details (TLS certificates, CDN provider, hosting metadata, supported protocols) can reveal the purpose of tclandroidicsapp.accu-weather.com?', 'What other AccuWeather or TCL-related subdomains are associated with tclandroidicsapp.accu-weather.com, and what ecosystem do they belong to?', 'What user functions or device features rely on tclandroidicsapp.accu-weather.com, and what typical activities occur when this domain is accessed?']
+2025-12-26 14:15:48,356 - src.graph.nodes - INFO - [round1_planning_node] Reasoning: Queries cover service identification, technical infrastructure, related domains, and user-purpose analysis to determine what service the SNI represents.
+2025-12-26 14:15:48,356 - src.graph.nodes - INFO - [round1_parallel_search_node] Executing 4 parallel searches
+2025-12-26 14:15:48,358 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:15:48,358 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:15:48,358 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:15:48,358 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:15:48,358 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:15:48,359 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: What application or service uses the domain tclandroidicsapp.accu-weather.com and which company operates it?
+2025-12-26 14:15:48,359 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: What technical infrastructure details (TLS certificates, CDN provider, hosting metadata, supported protocols) can reveal the purpose of tclandroidicsapp.accu-weather.com?
+2025-12-26 14:15:48,360 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: What other AccuWeather or TCL-related subdomains are associated with tclandroidicsapp.accu-weather.com, and what ecosystem do they belong to?
+2025-12-26 14:15:48,360 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: What user functions or device features rely on tclandroidicsapp.accu-weather.com, and what typical activities occur when this domain is accessed?
+2025-12-26 14:15:50,120 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 0 results
+2025-12-26 14:15:51,792 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 0 results
+2025-12-26 14:15:52,668 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 14:15:55,555 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 1 results
+2025-12-26 14:15:55,556 - src.graph.nodes - INFO - [round1_parallel_search_node] Completed 4/4 searches
+2025-12-26 14:15:55,556 - src.graph.nodes - INFO - [round2_planning_node] Extracting keywords from 4 results
+2025-12-26 14:15:56,040 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:15:58,480 - src.graph.nodes - INFO - [round2_planning_node] Extracted keywords: ['AccuWeather', 'Android']
+2025-12-26 14:15:58,480 - src.graph.nodes - INFO - [round2_planning_node] Reasoning: The domain is clearly tied to AccuWeather, the company operating the service, and multiple results reference its Android or Android TV app ecosystem, indicating the service context and platform.
+2025-12-26 14:15:58,482 - src.graph.nodes - INFO - [round2_parallel_search_node] Executing 2 parallel searches
+2025-12-26 14:15:58,483 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:15:58,483 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:15:58,483 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:15:58,483 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:15:58,483 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:15:58,483 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: AccuWeather
+2025-12-26 14:15:58,483 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: Android
+2025-12-26 14:16:01,616 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 7 results
+2025-12-26 14:16:05,748 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 6 results
+2025-12-26 14:16:05,748 - src.graph.nodes - INFO - [round2_parallel_search_node] Completed 2/2 searches
+2025-12-26 14:16:05,749 - src.graph.nodes - INFO - [final_search_planning_node] Generating final search query
+2025-12-26 14:16:05,749 - src.graph.nodes - INFO - [final_search_planning_node] Context size: 1934 chars
+2025-12-26 14:16:06,180 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:16:10,236 - src.graph.nodes - INFO - [final_search_planning_node] Final query: tcl android ics app accu-weather tclandroidicsapp.accu-weather.com official documentation TCL Android TV AccuWeather integration SNI subdomain purpose
+2025-12-26 14:16:10,236 - src.graph.nodes - INFO - [final_search_planning_node] Reasoning: This query merges all key elements: TCL, Android, ICS (Android Ice Cream Sandwich legacy naming), AccuWeather, the exact SNI, and the device–service integration context. It targets official documentation and authoritative sources describing how TCL Android TVs use AccuWeather services, increasing the chance of finding the specific service purpose behind the SNI.
+2025-12-26 14:16:10,236 - src.graph.nodes - INFO - [final_search_node] Executing final search: tcl android ics app accu-weather tclandroidicsapp.accu-weather.com official documentation TCL Android TV AccuWeather integration SNI subdomain purpose
+2025-12-26 14:16:10,237 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 14:16:10,237 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 14:16:10,238 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 14:16:10,238 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 14:16:10,238 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 14:16:13,514 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 2 results
+2025-12-26 14:16:13,514 - src.graph.nodes - INFO - [final_search_node] Final search completed
+2025-12-26 14:16:13,515 - src.graph.nodes - INFO - [synthesize_node] Synthesizing final answer from all sources
+2025-12-26 14:16:13,515 - src.graph.nodes - INFO - [synthesize_node] Context size: 3413 chars
+2025-12-26 14:16:13,673 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 14:16:17,343 - src.graph.nodes - INFO - [synthesize_node] Generated comprehensive answer from 6 sources
+2025-12-26 14:16:17,344 - __main__ - INFO -
+================================================================================
+2025-12-26 14:16:17,344 - __main__ - INFO - WORKFLOW EXECUTION RESULTS
+2025-12-26 14:16:17,344 - __main__ - INFO - ================================================================================
+2025-12-26 14:16:17,344 - __main__ - INFO -
+Original Query: tclandroidicsapp.accu-weather.com
+2025-12-26 14:16:17,344 - __main__ - INFO -
+[1] Exact Match: Found 0 matches
+2025-12-26 14:16:17,344 - __main__ - INFO -
+[2] Vector Search: 5 results
+2025-12-26 14:16:17,344 - __main__ - INFO -   1. SNI: vodcdn.ecerimg.com, Domain: ecer.com, Score: 0.639
+2025-12-26 14:16:17,344 - __main__ - INFO -   2. SNI: sun6-23.userapi.com, Domain: vkvideo.ru, Score: 0.623
+2025-12-26 14:16:17,344 - __main__ - INFO -   3. SNI: sun6-23.userapi.com, Domain: rezka.ag, Score: 0.623
+2025-12-26 14:16:17,344 - __main__ - INFO -
+[3] Initial Web Search: Completed (398 chars)
+2025-12-26 14:16:17,344 - __main__ - INFO -   Preview: # Non-HTML Content
+
+This URL returned content that cannot be parsed as HTML. Raw content: Error: Jina API returned status 400: {"data":null,"path":"url","code":400,"name":"ParamValidationError","statu...
+2025-12-26 14:16:17,345 - __main__ - INFO -
+[4] Round 1 Planning: Generated 4 queries
+2025-12-26 14:16:17,345 - __main__ - INFO -   1. What application or service uses the domain tclandroidicsapp.accu-weather.com and which company operates it?
+2025-12-26 14:16:17,345 - __main__ - INFO -   2. What technical infrastructure details (TLS certificates, CDN provider, hosting metadata, supported protocols) can reveal the purpose of tclandroidicsapp.accu-weather.com?
+2025-12-26 14:16:17,345 - __main__ - INFO -   3. What other AccuWeather or TCL-related subdomains are associated with tclandroidicsapp.accu-weather.com, and what ecosystem do they belong to?
+2025-12-26 14:16:17,345 - __main__ - INFO -   4. What user functions or device features rely on tclandroidicsapp.accu-weather.com, and what typical activities occur when this domain is accessed?
+2025-12-26 14:16:17,345 - __main__ - INFO -
+[5] Round 1 Search: Completed 4/4 searches
+2025-12-26 14:16:17,345 - __main__ - INFO -   1. What application or service uses the domain tclandroidicsapp.accu-weather.com and which company operates it?: Success
+2025-12-26 14:16:17,345 - __main__ - INFO -   2. What technical infrastructure details (TLS certificates, CDN provider, hosting metadata, supported protocols) can reveal the purpose of tclandroidicsapp.accu-weather.com?: Success
+2025-12-26 14:16:17,345 - __main__ - INFO -   3. What other AccuWeather or TCL-related subdomains are associated with tclandroidicsapp.accu-weather.com, and what ecosystem do they belong to?: Success
+2025-12-26 14:16:17,345 - __main__ - INFO -   4. What user functions or device features rely on tclandroidicsapp.accu-weather.com, and what typical activities occur when this domain is accessed?: Success
+2025-12-26 14:16:17,346 - __main__ - INFO -
+[6] Round 2 Planning: Extracted 2 keywords
+2025-12-26 14:16:17,346 - __main__ - INFO -   1. AccuWeather
+2025-12-26 14:16:17,346 - __main__ - INFO -   2. Android
+2025-12-26 14:16:17,346 - __main__ - INFO -
+[7] Round 2 Search: Completed 2/2 searches
+2025-12-26 14:16:17,346 - __main__ - INFO -   1. AccuWeather: Success
+2025-12-26 14:16:17,347 - __main__ - INFO -   2. Android: Success
+2025-12-26 14:16:17,347 - __main__ - INFO -
+[8] Final Search Planning: tcl android ics app accu-weather tclandroidicsapp.accu-weather.com official documentation TCL Android TV AccuWeather integration SNI subdomain purpose
+2025-12-26 14:16:17,347 - __main__ - INFO -
+[9] Final Search: Completed (594 chars)
+2025-12-26 14:16:17,347 - __main__ - INFO -   Preview: [{"title": "AccuWeather: Weather Radar - Apps on Google Play", "url": "https://play.google.com/store/apps/details?id=com.accuweather.android&hl=en_US", "snippet": "The app delivers more reliable and m...
+2025-12-26 14:16:17,347 - __main__ - INFO -
+[10] Final Answer Synthesis:
+2025-12-26 14:16:17,347 - __main__ - INFO -   {
+  "tgt": "AccuWeather weather data service for TCL Android devices",
+  "Explanation": "This domain corresponds to an AccuWeather-operated weather data endpoint used by TCL Android devices or system apps to retrieve forecasts and related weather information. It appears to support a TCL-branded Android (likely Android TV or system-level) weather application.",
+  "Query Results": "No direct records exist for the exact SNI, but all evidence points to AccuWeather services. Searches consistently ret...
+2025-12-26 14:16:17,347 - __main__ - INFO -
+================================================================================
+2025-12-26 14:16:17,347 - __main__ - INFO - TEST SUMMARY
+2025-12-26 14:16:17,348 - __main__ - INFO - ================================================================================
+2025-12-26 14:16:17,348 - __main__ - INFO -
+Total Web Searches Executed: 8/8
+2025-12-26 14:16:17,348 - __main__ - INFO - Success Criteria Met: 6/6
+2025-12-26 14:16:17,348 - __main__ - INFO -
+Criteria:
+2025-12-26 14:16:17,348 - __main__ - INFO -   - Vector search completed
+2025-12-26 14:16:17,348 - __main__ - INFO -   - Initial web search completed
+2025-12-26 14:16:17,348 - __main__ - INFO -   - Round 1: 4/4 searches completed
+2025-12-26 14:16:17,348 - __main__ - INFO -   - Round 2: 2/2 searches completed
+2025-12-26 14:16:17,349 - __main__ - INFO -   - Final search completed
+2025-12-26 14:16:17,349 - __main__ - INFO -   - Final answer synthesized
+2025-12-26 14:16:17,349 - __main__ - INFO -
+================================================================================
+2025-12-26 14:16:17,349 - __main__ - INFO - WORKFLOW PERFORMANCE
+2025-12-26 14:16:17,349 - __main__ - INFO - ================================================================================
+2025-12-26 14:16:17,350 - __main__ - INFO -
+Search Depth: 8 rounds
+2025-12-26 14:16:17,350 - __main__ - INFO - Query Diversification: Round 1 used 4 different angles
+2025-12-26 14:16:17,351 - __main__ - INFO - Keyword Refinement: Round 2 focused on 2 core topics
+2025-12-26 14:16:17,351 - __main__ - INFO - Comprehensive Coverage: Yes
+2025-12-26 14:16:17,351 - __main__ - INFO -

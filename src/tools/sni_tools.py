@@ -7,6 +7,8 @@ from sentence_transformers import SentenceTransformer
 from langchain_core.tools import tool
 
 from src.config import settings
+from src.tools.search import get_web_search_tool
+from src.tools.crawl import crawl_tool
 
 
 class SNITools:
@@ -246,4 +248,10 @@ def create_langchain_tools(tools_instance: SNITools):
         """
         return tools_instance.search_by_domain(domain, limit=limit)
 
-    return [search_sni_exact, search_sni_vector, search_by_domain]
+    tools = [search_sni_exact, search_sni_vector, search_by_domain]
+
+    web_search = get_web_search_tool(max_search_results=settings.MAX_SEARCH_RESULTS)
+    tools.append(web_search)
+    tools.append(crawl_tool)
+
+    return tools
