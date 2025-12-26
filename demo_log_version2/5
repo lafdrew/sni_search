@@ -1,0 +1,232 @@
+ sni_search  uv run python .\demo\test_multi_round_search.py
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "output_schema" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "stream" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+2025-12-26 17:03:17,280 - __main__ - INFO - ================================================================================
+2025-12-26 17:03:17,280 - __main__ - INFO - Testing Multi-Round Iterative Search Workflow
+2025-12-26 17:03:17,280 - __main__ - INFO - ================================================================================
+2025-12-26 17:03:17,281 - __main__ - INFO -
+Test Query: tclandroidicsapp.accu-weather.com
+
+2025-12-26 17:03:17,281 - src.graph.builder - INFO - [create_sni_graph] Building multi-round SNI search workflow
+2025-12-26 17:03:17,322 - httpx - INFO - HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-12-26 17:03:17,326 - src.graph.builder - INFO - [_create_llm] Creating OpenAI LLM: gpt-5.1-chat-latest
+2025-12-26 17:03:17,442 - src.graph.builder - INFO - [create_sni_graph] Multi-round workflow compiled successfully
+2025-12-26 17:03:17,442 - src.graph.builder - INFO -
+    New workflow structure:
+
+    START → sni_exact_query
+              ↓
+              ├─[has results]─→ synthesize → END
+              └─[no results]──→ vector_search
+                                  ↓
+                                  initial_web_search (direct SNI search)
+                                  ↓
+                                  keyword_extraction (extract keywords from vector + web)
+                                  ↓
+                                  round1_planning (LLM generates 4 queries using keywords)
+                                  ↓
+                                  round1_search (4 parallel searches)
+                                  ↓
+                                  round2_planning (LLM extracts 2 keywords)
+                                  ↓
+                                  round2_search (2 parallel searches)
+                                  ↓
+                                  final_planning (LLM generates final query)
+                                  ↓
+                                  final_search (1 comprehensive search)
+                                  ↓
+                                  synthesize → END
+
+    Total: Up to 8 web searches (1 initial + 4 round1 + 2 round2 + 1 final)
+
+2025-12-26 17:03:17,443 - __main__ - INFO - Starting multi-round workflow execution...
+
+2025-12-26 17:03:17,444 - src.graph.nodes - INFO - [sni_exact_query_node] Querying exact match for: tclandroidicsapp.accu-weather.com
+2025-12-26 17:03:17,479 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/scroll "HTTP/1.1 200 OK"
+2025-12-26 17:03:17,479 - src.graph.nodes - INFO - [sni_exact_query_node] Found 2 results
+2025-12-26 17:03:17,480 - src.graph.nodes - INFO - [Decision] No exact results → try vector search
+2025-12-26 17:03:17,481 - src.graph.nodes - INFO - [sni_vector_query_node] Querying vector similarity for: tclandroidicsapp.accu-weather.com
+2025-12-26 17:03:17,482 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2025-12-26 17:03:17,482 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 53.44it/s]
+2025-12-26 17:03:22,971 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/query "HTTP/1.1 200 OK"
+2025-12-26 17:03:22,972 - src.graph.nodes - INFO - [sni_vector_query_node] Found 5 results
+2025-12-26 17:03:22,973 - src.graph.nodes - INFO - [initial_web_search_node] Crawling homepage for: tclandroidicsapp.accu-weather.com
+2025-12-26 17:03:22,973 - src.graph.nodes - INFO - [initial_web_search_node] Trying HTTPS: https://tclandroidicsapp.accu-weather.com
+2025-12-26 17:03:22,974 - src.tools.crawler.crawler - INFO - Selecting Jina crawler engine
+2025-12-26 17:03:22,974 - src.tools.crawler.crawler - INFO - Crawling URL: https://tclandroidicsapp.accu-weather.com using JinaClient
+2025-12-26 17:03:22,974 - src.tools.crawler.jina_client - WARNING - Jina API key is not set. Provide your own key to access a higher rate limit. See https://jina.ai/reader for more information.
+2025-12-26 17:03:23,332 - src.tools.crawler.jina_client - ERROR - Jina API returned status 400: {"data":null,"path":"url","code":400,"name":"ParamValidationError","status":40001,"message":"Domain 'tclandroidicsapp.accu-weather.com' could not be resolved","readableMessage":"ParamValidationError(url): Domain 'tclandroidicsapp.accu-weather.com' could not be resolved"}
+2025-12-26 17:03:23,333 - src.tools.crawler.crawler - WARNING - Non-HTML content received from URL https://tclandroidicsapp.accu-weather.com, creating fallback article
+2025-12-26 17:03:23,334 - src.graph.nodes - INFO - [initial_web_search_node] Successfully crawled via HTTPS (398 chars, title: 'Non-HTML Content')
+2025-12-26 17:03:23,334 - src.graph.nodes - INFO - [keyword_extraction_node] Extracting keywords from vector results and initial web search
+2025-12-26 17:03:23,797 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 17:03:27,354 - src.graph.nodes - INFO - [keyword_extraction_node] Extracted keywords: ['tcl', 'android', 'accuweather']
+2025-12-26 17:03:27,354 - src.graph.nodes - INFO - [keyword_extraction_node] Enhanced query: tclandroidicsapp.accu-weather.com tcl android accuweather
+2025-12-26 17:03:27,354 - src.graph.nodes - INFO - [keyword_extraction_node] Reasoning: Vector results were unrelated, but the target SNI hostname itself indicates a TCL Android AccuWeather application. Keywords derived only from the identifiable components of the target SNI.
+2025-12-26 17:03:27,355 - src.graph.nodes - INFO - [round1_planning_node] Generating round 1 queries for: tclandroidicsapp.accu-weather.com
+2025-12-26 17:03:27,355 - src.graph.nodes - INFO - [round1_planning_node] Using extracted keywords: ['tcl', 'android', 'accuweather']
+2025-12-26 17:03:27,516 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 17:03:30,399 - src.graph.nodes - INFO - [round1_planning_node] Generated queries: ['accu-weather.com tcl', 'accuweather tcl android', 'accu-weather.com android', 'tcl accuweather']
+2025-12-26 17:03:30,399 - src.graph.nodes - INFO - [round1_planning_node] Reasoning: Focused on the suffix accu-weather.com and accuweather combined with the extracted keywords in varied orders and forms.
+2025-12-26 17:03:30,399 - src.graph.nodes - INFO - [round1_parallel_search_node] Executing 4 parallel searches
+2025-12-26 17:03:30,400 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 17:03:30,400 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 17:03:30,400 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 17:03:30,401 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 17:03:30,401 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 17:03:30,401 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: accu-weather.com tcl
+2025-12-26 17:03:30,401 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: accuweather tcl android
+2025-12-26 17:03:30,401 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: accu-weather.com android
+2025-12-26 17:03:30,402 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: tcl accuweather
+2025-12-26 17:03:33,058 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 17:03:33,197 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 17:03:34,081 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 17:03:34,181 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 17:03:34,182 - src.graph.nodes - INFO - [round1_parallel_search_node] Completed 4/4 searches
+2025-12-26 17:03:34,182 - src.graph.nodes - INFO - [round2_planning_node] Generating Round2 queries from 4 Round1 results
+2025-12-26 17:03:34,343 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 17:03:37,406 - src.graph.nodes - INFO - [round2_planning_node] Discovered organization: AccuWeather
+2025-12-26 17:03:37,406 - src.graph.nodes - INFO - [round2_planning_node] Generated queries: ['tclandroidicsapp accuweather', 'tcl android accuweather ics']
+2025-12-26 17:03:37,406 - src.graph.nodes - INFO - [round2_planning_node] Reasoning: Extracted AccuWeather as the organization. Used prefix components tcl, android, ics, and app combined with the organization name to target identification of the specific function behind the subdomain.
+2025-12-26 17:03:37,406 - src.graph.nodes - INFO - [round2_parallel_search_node] Executing 2 parallel searches
+2025-12-26 17:03:37,408 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 17:03:37,408 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 17:03:37,408 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 17:03:37,408 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 17:03:37,408 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 17:03:37,408 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: tclandroidicsapp accuweather
+2025-12-26 17:03:37,409 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: tcl android accuweather ics
+2025-12-26 17:03:39,565 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 10 results
+2025-12-26 17:03:41,492 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 1 results
+2025-12-26 17:03:41,493 - src.graph.nodes - INFO - [round2_parallel_search_node] Completed 2/2 searches
+2025-12-26 17:03:41,493 - src.graph.nodes - INFO - [final_search_planning_node] Generating final verification query
+2025-12-26 17:03:41,493 - src.graph.nodes - INFO - [final_search_planning_node] Using Round 2 keywords: ['tclandroidicsapp accuweather', 'tcl android accuweather ics']
+2025-12-26 17:03:41,651 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 17:03:44,768 - src.graph.nodes - INFO - [final_search_planning_node] Final query: tclandroidicsapp.accu-weather.com tclandroidicsapp accuweather tcl android accuweather ics
+2025-12-26 17:03:44,768 - src.graph.nodes - INFO - [final_search_planning_node] Reasoning: Combines full SNI with all Round 2 keywords to maximize verification of the associated service.
+2025-12-26 17:03:44,768 - src.graph.nodes - INFO - [final_search_node] Executing final search: tclandroidicsapp.accu-weather.com tclandroidicsapp accuweather tcl android accuweather ics
+2025-12-26 17:03:44,769 - src.tools.search - INFO - SearchApi search configuration loaded: engine=google
+2025-12-26 17:03:44,769 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi wrapper initialized with engine: google
+2025-12-26 17:03:44,770 - src.tools.searchapi_search.searchapi_search_results - INFO -
+============================================
+SearchApi Search Initialization
+============================================
+2025-12-26 17:03:44,770 - src.tools.searchapi_search.searchapi_search_results - INFO -
+Tool Information:
+Tool Name: web_search
+Search Engine: google
+Max Results: 5
+Configuration Summary:
+Response Format: content_and_artifact
+
+2025-12-26 17:03:44,770 - src.tools.searchapi_search.searchapi_search_results - INFO -
+**********************************************************************
+
+2025-12-26 17:03:46,228 - src.tools.searchapi_search.searchapi_search_api - INFO - SearchApi async returned 9 results
+2025-12-26 17:03:46,228 - src.graph.nodes - INFO - [final_search_node] Final search completed
+2025-12-26 17:03:46,228 - src.graph.nodes - INFO - [synthesize_node] Synthesizing final answer from all sources
+2025-12-26 17:03:46,229 - src.graph.nodes - INFO - [synthesize_node] Context size: 5013 chars
+2025-12-26 17:03:46,390 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 17:03:52,571 - src.graph.nodes - INFO - [synthesize_node] Generated comprehensive answer from 6 sources
+2025-12-26 17:03:52,572 - __main__ - INFO -
+================================================================================
+2025-12-26 17:03:52,572 - __main__ - INFO - WORKFLOW EXECUTION RESULTS
+2025-12-26 17:03:52,572 - __main__ - INFO - ================================================================================
+2025-12-26 17:03:52,572 - __main__ - INFO -
+Original Query: tclandroidicsapp.accu-weather.com
+2025-12-26 17:03:52,572 - __main__ - INFO -
+[1] Exact Match: Found 0 matches
+2025-12-26 17:03:52,572 - __main__ - INFO -
+[2] Vector Search: 5 results
+2025-12-26 17:03:52,572 - __main__ - INFO -   1. SNI: vodcdn.ecerimg.com, Domain: ecer.com, Score: 0.639
+2025-12-26 17:03:52,572 - __main__ - INFO -   2. SNI: sun6-23.userapi.com, Domain: vkvideo.ru, Score: 0.623
+2025-12-26 17:03:52,572 - __main__ - INFO -   3. SNI: sun6-23.userapi.com, Domain: rezka.ag, Score: 0.623
+2025-12-26 17:03:52,573 - __main__ - INFO -
+[3] Initial Web Search: Completed (398 chars)
+2025-12-26 17:03:52,573 - __main__ - INFO -   Preview: # Non-HTML Content
+
+This URL returned content that cannot be parsed as HTML. Raw content: Error: Jina API returned status 400: {"data":null,"path":"url","code":400,"name":"ParamValidationError","statu...
+2025-12-26 17:03:52,573 - __main__ - INFO -
+[4] Round 1 Planning: Generated 4 queries
+2025-12-26 17:03:52,573 - __main__ - INFO -   1. accu-weather.com tcl
+2025-12-26 17:03:52,573 - __main__ - INFO -   2. accuweather tcl android
+2025-12-26 17:03:52,573 - __main__ - INFO -   3. accu-weather.com android
+2025-12-26 17:03:52,573 - __main__ - INFO -   4. tcl accuweather
+2025-12-26 17:03:52,573 - __main__ - INFO -
+[5] Round 1 Search: Completed 4/4 searches
+2025-12-26 17:03:52,573 - __main__ - INFO -   1. accu-weather.com tcl: Success
+2025-12-26 17:03:52,573 - __main__ - INFO -   2. accuweather tcl android: Success
+2025-12-26 17:03:52,574 - __main__ - INFO -   3. accu-weather.com android: Success
+2025-12-26 17:03:52,574 - __main__ - INFO -   4. tcl accuweather: Success
+2025-12-26 17:03:52,574 - __main__ - INFO -
+[6] Round 2 Planning: Extracted 2 keywords
+2025-12-26 17:03:52,574 - __main__ - INFO -   1. tclandroidicsapp accuweather
+2025-12-26 17:03:52,574 - __main__ - INFO -   2. tcl android accuweather ics
+2025-12-26 17:03:52,574 - __main__ - INFO -
+[7] Round 2 Search: Completed 2/2 searches
+2025-12-26 17:03:52,574 - __main__ - INFO -   1. tclandroidicsapp accuweather: Success
+2025-12-26 17:03:52,574 - __main__ - INFO -   2. tcl android accuweather ics: Success
+2025-12-26 17:03:52,574 - __main__ - INFO -
+[8] Final Search Planning: tclandroidicsapp.accu-weather.com tclandroidicsapp accuweather tcl android accuweather ics
+2025-12-26 17:03:52,574 - __main__ - INFO -
+[9] Final Search: Completed (1491 chars)
+2025-12-26 17:03:52,574 - __main__ - INFO -   Preview: [{"title": "AccuWeather: Weather Radar - Apps on Google Play", "url": "https://play.google.com/store/apps/details?id=com.accuweather.android&hl=en_US", "snippet": "The app delivers more reliable and m...
+2025-12-26 17:03:52,575 - __main__ - INFO -
+[10] Final Answer Synthesis:
+2025-12-26 17:03:52,575 - __main__ - INFO -   {
+  "tgt": "AccuWeather weather data service for TCL Android devices",
+  "Explanation": "This domain is an AccuWeather endpoint used by TCL Android/ICS system apps to retrieve weather data for the built‑in TCL Weather application.",
+  "Query Results": "The SNI does not resolve but includes both 'tcl' and 'accu-weather', and searches reveal TCL Weather apps and AccuWeather’s Android integrations. A Tableau dataset even lists tclandroidicsapp.accu-weather.com among known service endpoints. No othe...
+2025-12-26 17:03:52,575 - __main__ - INFO -
+================================================================================
+2025-12-26 17:03:52,575 - __main__ - INFO - TEST SUMMARY
+2025-12-26 17:03:52,576 - __main__ - INFO - ================================================================================
+2025-12-26 17:03:52,576 - __main__ - INFO -
+Total Web Searches Executed: 8/8
+2025-12-26 17:03:52,576 - __main__ - INFO - Success Criteria Met: 6/6
+2025-12-26 17:03:52,576 - __main__ - INFO -
+Criteria:
+2025-12-26 17:03:52,576 - __main__ - INFO -   - Vector search completed
+2025-12-26 17:03:52,576 - __main__ - INFO -   - Initial web search completed
+2025-12-26 17:03:52,576 - __main__ - INFO -   - Round 1: 4/4 searches completed
+2025-12-26 17:03:52,577 - __main__ - INFO -   - Round 2: 2/2 searches completed
+2025-12-26 17:03:52,577 - __main__ - INFO -   - Final search completed
+2025-12-26 17:03:52,577 - __main__ - INFO -   - Final answer synthesized
+2025-12-26 17:03:52,577 - __main__ - INFO -
+================================================================================
+2025-12-26 17:03:52,577 - __main__ - INFO - WORKFLOW PERFORMANCE
+2025-12-26 17:03:52,577 - __main__ - INFO - ================================================================================
+2025-12-26 17:03:52,577 - __main__ - INFO -
+Search Depth: 8 rounds
+2025-12-26 17:03:52,578 - __main__ - INFO - Query Diversification: Round 1 used 4 different angles
+2025-12-26 17:03:52,578 - __main__ - INFO - Keyword Refinement: Round 2 focused on 2 core topics
+2025-12-26 17:03:52,578 - __main__ - INFO - Comprehensive Coverage: Yes
+2025-12-26 17:03:52,579 - __main__ - INFO -
+================================================================================

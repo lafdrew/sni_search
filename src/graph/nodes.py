@@ -8,7 +8,7 @@ from langchain_core.language_models import BaseChatModel
 
 from src.graph.state import SNIAgentState
 from src.tools import SNITools
-from src.prompts import get_prompt_template
+from src.prompts import get_prompt_template, apply_prompt_variables
 from src.config import settings
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class SNIWorkflowNodes:
             return {"sni_vector_results": None}
 
     def keyword_extraction_node(self, state: SNIAgentState) -> Dict[str, Any]:
-        """Node 2.5: Extract keywords from vector results using LLM.
+        """Node 2.5: Extract keywords from vector results and initial web search using LLM.
 
         Args:
             state: Current agent state
@@ -87,42 +87,40 @@ class SNIWorkflowNodes:
         """
         query = state["query"]
         vector_results = state.get("sni_vector_results")
+        initial_search_result = state.get("initial_search_result")
 
-        logger.info(f"[keyword_extraction_node] Analyzing vector results for keyword extraction")
+        logger.info(f"[keyword_extraction_node] Extracting keywords from vector results and initial web search")
 
-        if not vector_results or len(vector_results) == 0:
-            logger.warning("[keyword_extraction_node] No vector results to analyze")
+        if (not vector_results or len(vector_results) == 0) and not initial_search_result:
+            logger.warning("[keyword_extraction_node] No data sources available")
             return {
                 "extracted_keywords": [],
                 "enhanced_query": query
             }
 
         try:
-            results_summary = "\n".join([
-                f"- SNI: {r.get('sni')}, Domain: {r.get('domain')}, Score: {r.get('score')}, Protocols: {r.get('protocols')}"
-                for r in vector_results[:5]
-            ])
+            if vector_results and len(vector_results) > 0:
+                results_summary = "\n".join([
+                    f"- SNI: {r.get('sni')}, Domain: {r.get('domain')}, Score: {r.get('score')}, Protocols: {r.get('protocols')}"
+                    for r in vector_results[:5]
+                ])
+            else:
+                results_summary = "No vector search results available"
 
-            extraction_prompt = f"""Based on the vector search results below, extract meaningful keywords that could help improve web search for the user's query.
+            if initial_search_result:
+                initial_summary = initial_search_result[:500] + "..." if len(initial_search_result) > 500 else initial_search_result
+            else:
+                initial_summary = "No initial search content available"
 
-User Query: {query}
-
-Vector Search Results:
-{results_summary}
-
-Your task:
-1. Identify the most relevant keywords from domains, SNI names, and protocols
-2. Extract 3-5 keywords that would help find more information on the web
-3. Generate an enhanced search query by combining the original query with selected keywords
-
-Respond in JSON format:
-{{
-    "keywords": ["keyword1", "keyword2", "keyword3"],
-    "enhanced_query": "enhanced search query string",
-    "reasoning": "brief explanation of your selection"
-}}
-
-Output valid JSON without markdown code blocks."""
+            extraction_prompt = apply_prompt_variables(
+                "keyword_extraction",
+                variables={
+                    "query": query,
+                    "results_summary": results_summary,
+                    "initial_content": initial_summary
+                },
+                locale=state.get("locale", "en-US")
+            )
 
             messages = [
                 {"role": "user", "content": extraction_prompt}
@@ -199,21 +197,7 @@ Output valid JSON without markdown code blocks."""
             tools = [web_search_tool, crawl_tool]
 
             # Create agent with system prompt
-            system_prompt = """You are a research assistant helping to gather information about an SNI (Server Name Indication).
-
-Your task:
-1. Use web_search to find information about the query
-2. Analyze the search results carefully
-3. If you find an official website, authoritative documentation, or highly relevant source, use crawl_tool to get detailed content
-4. Only crawl if the source is trustworthy and would provide significantly more value than search snippets
-
-Guidelines for crawling:
-- Crawl official websites, documentation pages, or authoritative sources
-- Do NOT crawl if search snippets already provide sufficient information
-- Do NOT crawl untrusted or irrelevant sources
-- Crawl at most ONE page to keep response time reasonable
-
-Return your findings in a concise summary."""
+            system_prompt = get_prompt_template("web_search_agent", locale=state.get("locale", "en-US"))
 
             # Create the agent (returns CompiledStateGraph)
             agent_graph = create_agent(
@@ -345,32 +329,14 @@ Return your findings in a concise summary."""
 
             system_prompt = get_prompt_template("sni_agent", locale=state.get("locale", "en-US"))
 
-            synthesis_prompt = f"""Based on comprehensive information from multiple search rounds, identify what service this SNI represents.
-
-Original Query (SNI): {state['query']}
-
-All Available Information:
-{context}
-
-Your task: Determine what service/application this SNI represents.
-
-Provide a JSON response with these fields:
-- "tgt": Name and type of the service (identify specifically: what service/product is this?)
-- "Explanation": Clear explanation of what the service does, who operates/owns it, and what it's used for
-- "Query Results": Summary of key findings that helped identify the service (include company name, service category, primary function)
-
-Focus on answering:
-1. What service is this SNI used for?
-2. Who operates this service?
-3. What do users access through this domain?
-
-Prioritize information from:
-1. Official sources and company documentation
-2. Frequently appearing service/company names across searches
-3. Authoritative technical documentation
-4. Verified service descriptions
-
-Output valid JSON without markdown code blocks."""
+            synthesis_prompt = apply_prompt_variables(
+                "synthesis",
+                variables={
+                    "query": state['query'],
+                    "context": context
+                },
+                locale=state.get("locale", "en-US")
+            )
 
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -467,7 +433,7 @@ Output valid JSON without markdown code blocks."""
     def round1_planning_node(self, state: SNIAgentState) -> Dict[str, Any]:
         """Node: Generate 4 diverse search queries for round 1.
 
-        Based on vector search results and original SNI, generates 4 queries
+        Based on extracted keywords from previous steps, generates 4 queries
         exploring different aspects (technical, service info, infrastructure, security).
 
         Args:
@@ -477,49 +443,34 @@ Output valid JSON without markdown code blocks."""
             Updated state with round1_queries
         """
         query = state["query"]
-        vector_results = state.get("sni_vector_results")
+        extracted_keywords = state.get("extracted_keywords", [])
 
         logger.info(f"[round1_planning_node] Generating round 1 queries for: {query}")
+        logger.info(f"[round1_planning_node] Using extracted keywords: {extracted_keywords}")
 
-        if not vector_results or len(vector_results) == 0:
-            logger.warning("[round1_planning_node] No vector results, using fallback queries")
+        if not extracted_keywords or len(extracted_keywords) == 0:
+            logger.warning("[round1_planning_node] No extracted keywords, using fallback queries")
+            # Use only the query itself without adding descriptive words
             return {
                 "round1_queries": [
-                    f"{query} technical details",
-                    f"{query} service information",
-                    f"{query} infrastructure",
-                    f"{query} security"
+                    query,
+                    query,
+                    query,
+                    query
                 ]
             }
 
         try:
-            results_summary = "\n".join([
-                f"- SNI: {r.get('sni')}, Domain: {r.get('domain')}, Score: {r.get('score')}, Protocols: {r.get('protocols')}"
-                for r in vector_results[:5]
-            ])
+            keywords_str = ", ".join(extracted_keywords)
 
-            planning_prompt = f"""Based on the vector search results below, generate 4 diverse search queries to identify what service this SNI represents.
-
-User Query (SNI): {query}
-
-Vector Search Results:
-{results_summary}
-
-Generate 4 queries covering:
-1. Service identification (what service/application uses this domain, company/organization behind it)
-2. Technical infrastructure (protocols, certificates, CDN, hosting details that reveal service purpose)
-3. Related domains and ecosystem (associated domains that indicate service category)
-4. Usage and purpose (what users access through this domain, typical use cases)
-
-All queries should focus on answering: "What service does this SNI represent?"
-
-Respond in JSON format:
-{{
-    "queries": ["query1", "query2", "query3", "query4"],
-    "reasoning": "brief explanation of query strategy"
-}}
-
-Output valid JSON without markdown code blocks."""
+            planning_prompt = apply_prompt_variables(
+                "round1_planning",
+                variables={
+                    "query": query,
+                    "keywords": keywords_str
+                },
+                locale=state.get("locale", "en-US")
+            )
 
             messages = [
                 {"role": "user", "content": planning_prompt}
@@ -615,7 +566,7 @@ Output valid JSON without markdown code blocks."""
             return {"round1_results": []}
 
     def round2_planning_node(self, state: SNIAgentState) -> Dict[str, Any]:
-        """Node: Extract 2 most important keywords from round 1 results.
+        """Node: Extract organization from round 1 results and generate 2 precise queries.
 
         Args:
             state: Current agent state
@@ -624,13 +575,13 @@ Output valid JSON without markdown code blocks."""
             Updated state with round2_keywords
         """
         round1_results = state.get("round1_results", [])
+        query = state["query"]
 
-        logger.info(f"[round2_planning_node] Extracting keywords from {len(round1_results)} results")
+        logger.info(f"[round2_planning_node] Generating Round2 queries from {len(round1_results)} Round1 results")
 
         if not round1_results:
             logger.warning("[round2_planning_node] No round1 results, using query as fallback")
-            query = state["query"]
-            return {"round2_keywords": [query, f"{query} service"]}
+            return {"round2_keywords": [query, query]}
 
         try:
             results_summary = "\n\n".join([
@@ -638,25 +589,14 @@ Output valid JSON without markdown code blocks."""
                 for r in round1_results[:4]
             ])
 
-            planning_prompt = f"""Analyze the following 4 search results and extract the 2 MOST IMPORTANT keywords for identifying what service this SNI represents.
-
-Search Results:
-{results_summary}
-
-Choose keywords that:
-1. Help identify the service/application (company name, product name, service type)
-2. Appear frequently across multiple results and are central to service identification
-3. Would lead to finding official documentation or authoritative sources about the service
-
-Focus on: What service is this? Who operates it? What is it used for?
-
-Respond in JSON format:
-{{
-    "keywords": ["keyword1", "keyword2"],
-    "reasoning": "why these keywords identify the service"
-}}
-
-Output valid JSON without markdown code blocks."""
+            planning_prompt = apply_prompt_variables(
+                "round2_planning",
+                variables={
+                    "query": query,  # Pass full SNI so LLM can see the prefix
+                    "results_summary": results_summary
+                },
+                locale=state.get("locale", "en-US")
+            )
 
             messages = [
                 {"role": "user", "content": planning_prompt}
@@ -678,23 +618,23 @@ Output valid JSON without markdown code blocks."""
 
             result = json.loads(cleaned_answer)
 
-            keywords = result.get("keywords", [])
+            queries = result.get("queries", [])
+            organization = result.get("organization", "")
             reasoning = result.get("reasoning", "")
 
-            if len(keywords) < 2:
-                logger.warning(f"[round2_planning_node] Only got {len(keywords)} keywords, using fallback")
-                query = state["query"]
-                keywords = [query, f"{query} documentation"]
+            if len(queries) < 2:
+                logger.warning(f"[round2_planning_node] Only got {len(queries)} queries, using fallback")
+                queries = [query, query]
 
-            logger.info(f"[round2_planning_node] Extracted keywords: {keywords}")
+            logger.info(f"[round2_planning_node] Discovered organization: {organization}")
+            logger.info(f"[round2_planning_node] Generated queries: {queries}")
             logger.info(f"[round2_planning_node] Reasoning: {reasoning}")
 
-            return {"round2_keywords": keywords[:2]}
+            return {"round2_keywords": queries[:2]}
 
         except Exception as e:
             logger.error(f"[round2_planning_node] Error: {e}")
-            query = state["query"]
-            return {"round2_keywords": [query, f"{query} documentation"]}
+            return {"round2_keywords": [query, query]}
 
     async def round2_parallel_search_node(self, state: SNIAgentState) -> Dict[str, Any]:
         """Node: Execute 2 parallel web searches for round 2 keywords.
@@ -741,9 +681,9 @@ Output valid JSON without markdown code blocks."""
             return {"round2_results": []}
 
     def final_search_planning_node(self, state: SNIAgentState) -> Dict[str, Any]:
-        """Node: Generate final comprehensive search query.
+        """Node: Generate final verification search query.
 
-        Synthesizes all previous search results into one ultimate query.
+        Uses Round 2 keywords + original query to create a verification search.
 
         Args:
             state: Current agent state
@@ -752,63 +692,27 @@ Output valid JSON without markdown code blocks."""
             Updated state with final_search_query
         """
         query = state["query"]
-        initial_result = state.get("initial_search_result")
-        round1_results = state.get("round1_results") or []
-        round2_results = state.get("round2_results") or []
+        round2_keywords = state.get("round2_keywords", [])
 
-        logger.info(f"[final_search_planning_node] Generating final search query")
+        logger.info(f"[final_search_planning_node] Generating final verification query")
+        logger.info(f"[final_search_planning_node] Using Round 2 keywords: {round2_keywords}")
+
+        # If no Round 2 keywords, use query itself
+        if not round2_keywords or len(round2_keywords) == 0:
+            logger.warning("[final_search_planning_node] No Round 2 keywords, using query as fallback")
+            return {"final_search_query": query}
 
         try:
-            MAX_CONTEXT_CHARS = 8000
-            context_parts = []
+            keywords_str = ", ".join(round2_keywords)
 
-            if initial_result:
-                context_parts.append(f"Initial Search: {str(initial_result)[:500]}")
-
-            if round1_results:
-                round1_summary = "\n".join([
-                    f"- {r.get('query', '')[:60]}: {str(r.get('result', ''))[:300]}"
-                    for r in round1_results[:4]
-                ])
-                context_parts.append(f"Round 1 Results:\n{round1_summary}")
-
-            if round2_results:
-                round2_summary = "\n".join([
-                    f"- {r.get('keyword')}: {str(r.get('result', ''))[:300]}"
-                    for r in round2_results[:2]
-                ])
-                context_parts.append(f"Round 2 Results:\n{round2_summary}")
-
-            context = "\n\n".join(context_parts)
-
-            if len(context) > MAX_CONTEXT_CHARS:
-                logger.warning(f"[final_search_planning_node] Context too large ({len(context)} chars), truncating")
-                context = context[:MAX_CONTEXT_CHARS] + "\n[Context truncated]"
-
-            logger.info(f"[final_search_planning_node] Context size: {len(context)} chars")
-
-            planning_prompt = f"""Based on ALL the search results below, generate ONE final comprehensive search query to definitively identify what service this SNI represents.
-
-Original SNI Query: {query}
-
-All Search Results:
-{context}
-
-The final query should:
-1. Focus on identifying the service: What is it? Who operates it? What is its purpose?
-2. Incorporate key findings (company/service names, product identifiers) from all search rounds
-3. Target official documentation, company websites, or authoritative service descriptions
-4. Be specific enough to find definitive service identification
-
-Goal: Find authoritative information that clearly explains what service this SNI provides.
-
-Respond in JSON format:
-{{
-    "final_query": "comprehensive search query for service identification",
-    "reasoning": "how this query will identify the service"
-}}
-
-Output valid JSON without markdown code blocks."""
+            planning_prompt = apply_prompt_variables(
+                "final_search_planning",
+                variables={
+                    "query": query,
+                    "round2_keywords": keywords_str
+                },
+                locale=state.get("locale", "en-US")
+            )
 
             messages = [
                 {"role": "user", "content": planning_prompt}
@@ -818,11 +722,10 @@ Output valid JSON without markdown code blocks."""
             answer = response.content
 
             import json
-            import traceback
 
             if answer is None:
                 logger.error("[final_search_planning_node] LLM returned None content")
-                return {"final_search_query": f"{query} official documentation"}
+                return {"final_search_query": query}
 
             cleaned_answer = answer.strip()
             if cleaned_answer.startswith("```"):
@@ -833,15 +736,14 @@ Output valid JSON without markdown code blocks."""
                     lines = lines[:-1]
                 cleaned_answer = "\n".join(lines)
 
-            try:
-                result = json.loads(cleaned_answer)
-            except json.JSONDecodeError as je:
-                logger.error(f"[final_search_planning_node] JSON decode error: {je}")
-                logger.error(f"[final_search_planning_node] Raw answer: {answer}")
-                return {"final_search_query": f"{query} official documentation"}
+            result = json.loads(cleaned_answer)
 
-            final_query = result.get("final_query", query)
+            final_query = result.get("final_query", "")
             reasoning = result.get("reasoning", "")
+
+            if not final_query:
+                logger.warning("[final_search_planning_node] No final query generated, using fallback")
+                final_query = f"{query} {keywords_str}"
 
             logger.info(f"[final_search_planning_node] Final query: {final_query}")
             logger.info(f"[final_search_planning_node] Reasoning: {reasoning}")
@@ -849,10 +751,13 @@ Output valid JSON without markdown code blocks."""
             return {"final_search_query": final_query}
 
         except Exception as e:
-            import traceback
             logger.error(f"[final_search_planning_node] Error: {e}")
-            logger.error(f"[final_search_planning_node] Traceback:\n{traceback.format_exc()}")
-            return {"final_search_query": f"{query} official documentation"}
+            # Fallback: combine query with keywords
+            if round2_keywords:
+                fallback_query = f"{query} {' '.join(round2_keywords)}"
+            else:
+                fallback_query = query
+            return {"final_search_query": fallback_query}
 
     async def final_search_node(self, state: SNIAgentState) -> Dict[str, Any]:
         """Node: Execute final comprehensive search.

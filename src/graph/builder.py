@@ -86,10 +86,11 @@ def create_sni_graph(
     New multi-round search workflow:
     1. Exact SNI match
     2. Vector search + initial web search (parallel)
-    3. Round 1: Generate 4 queries → 4 parallel searches
-    4. Round 2: Extract 2 keywords → 2 parallel searches
-    5. Final: Generate ultimate query → 1 final search
-    6. Synthesize comprehensive answer
+    3. Keyword extraction from vector + web results
+    4. Round 1: Generate 4 queries (using keywords) → 4 parallel searches
+    5. Round 2: Extract 2 keywords → 2 parallel searches
+    6. Final: Generate ultimate query → 1 final search
+    7. Synthesize comprehensive answer
 
     All flow control is in PYTHON CODE for 100% reliability.
 
@@ -125,6 +126,7 @@ def create_sni_graph(
     workflow.add_node("sni_exact_query", nodes.sni_exact_query_node)
     workflow.add_node("vector_search", nodes.sni_vector_query_node)
     workflow.add_node("initial_web_search", nodes.initial_web_search_node)
+    workflow.add_node("keyword_extraction", nodes.keyword_extraction_node)
     workflow.add_node("round1_planning", nodes.round1_planning_node)
     workflow.add_node("round1_search", nodes.round1_parallel_search_node)
     workflow.add_node("round2_planning", nodes.round2_planning_node)
@@ -145,7 +147,8 @@ def create_sni_graph(
     )
 
     workflow.add_edge("vector_search", "initial_web_search")
-    workflow.add_edge("initial_web_search", "round1_planning")
+    workflow.add_edge("initial_web_search", "keyword_extraction")
+    workflow.add_edge("keyword_extraction", "round1_planning")
     workflow.add_edge("round1_planning", "round1_search")
     workflow.add_edge("round1_search", "round2_planning")
     workflow.add_edge("round2_planning", "round2_search")
@@ -167,7 +170,9 @@ def create_sni_graph(
                                   ↓
                                   initial_web_search (direct SNI search)
                                   ↓
-                                  round1_planning (LLM generates 4 queries)
+                                  keyword_extraction (extract keywords from vector + web)
+                                  ↓
+                                  round1_planning (LLM generates 4 queries using keywords)
                                   ↓
                                   round1_search (4 parallel searches)
                                   ↓
