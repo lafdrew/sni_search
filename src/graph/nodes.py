@@ -21,7 +21,8 @@ class SNIWorkflowNodes:
         self,
         tools_instance: SNITools,
         llm: BaseChatModel,
-        locale: str = "en-US"
+        locale: str = "en-US",
+        enable_tgt_library: bool = True
     ):
         """Initialize workflow nodes.
 
@@ -29,10 +30,27 @@ class SNIWorkflowNodes:
             tools_instance: SNI tools instance
             llm: Language model instance
             locale: Language locale
+            enable_tgt_library: Enable TGT standard library integration
         """
         self.tools = tools_instance
         self.llm = llm
         self.locale = locale
+
+        # Initialize TGT standard library
+        if enable_tgt_library:
+            try:
+                from src.tools.tgt_library import TGTLibraryTools
+                self.tgt_library = TGTLibraryTools(
+                    qdrant_url=settings.QDRANT_URL,
+                    collection_name=settings.QDRANT_TGT_COLLECTION,
+                    embedding_model=settings.EMBEDDING_MODEL
+                )
+                logger.info("TGT standard library initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize TGT library: {e}")
+                self.tgt_library = None
+        else:
+            self.tgt_library = None
 
     def sni_exact_query_node(self, state: SNIAgentState) -> Dict[str, Any]:
         """Node 1: Query SNI database with exact match.
@@ -352,6 +370,10 @@ class SNIWorkflowNodes:
                 return {"final_answer": error_answer}
 
             logger.info(f"[synthesize_node] Generated comprehensive answer from {len(context_parts)} sources")
+
+            # TGT standardization flow
+            if self.tgt_library:
+                answer = self._standardize_tgt(answer, state)
 
             return {"final_answer": answer}
 
@@ -787,8 +809,232 @@ class SNIWorkflowNodes:
             return {"final_search_result": result}
 
         except Exception as e:
-            logger.error(f"[final_search_node] Error: {e}", exc_info=True)
+            logger.error(f"[final_search_node] Error: {e}")
             return {"final_search_result": None}
+
+    def _standardize_tgt(self, answer: str, state: SNIAgentState) -> str:
+        """Standardize TGT using standard library.
+
+        Args:
+            answer: Raw LLM answer (JSON string)
+            state: Current agent state
+
+        Returns:
+            Standardized answer (JSON string)
+        """
+        try:
+            import json
+
+            # Parse LLM response
+            tgt_data = json.loads(answer)
+            raw_tgt = tgt_data.get("tgt", "Unknown")
+
+            # Skip if no valid tgt
+            if raw_tgt in ["Unknown", "Error", ""]:
+                logger.info(f"[TGT] No valid tgt to standardize: {raw_tgt}")
+                return answer
+
+            logger.info(f"[TGT] Starting standardization for: {raw_tgt}")
+
+            # Step 1: Exact match
+            exact_match = self.tgt_library.search_exact(raw_tgt)
+            if exact_match:
+                logger.info(f"[TGT] Exact match found: {exact_match['standard_name']}")
+                tgt_data["tgt"] = exact_match["standard_name"]
+                tgt_data["_tgt_metadata"] = {
+                    "matched_entity_id": exact_match["id"],
+                    "match_type": "exact",
+                    "original_tgt": raw_tgt
+                }
+                return json.dumps(tgt_data, ensure_ascii=False)
+
+            # Step 2: Vector search for similar entities
+            vector_results = self.tgt_library.search_vector(
+                raw_tgt,
+                top_k=3,
+                threshold=settings.TGT_VECTOR_THRESHOLD
+            )
+
+            if vector_results:
+                logger.info(f"[TGT] Found {len(vector_results)} similar entities via vector search")
+
+                # Step 3: LLM judgment
+                llm_decision = self._check_tgt_similarity(
+                    raw_tgt,
+                    tgt_data.get("Explanation", ""),
+                    vector_results
+                )
+
+                if llm_decision["match_found"] and llm_decision["confidence"] > settings.TGT_LLM_CONFIDENCE_THRESHOLD:
+                    matched_entity = llm_decision["matched_standard_name"]
+                    logger.info(f"[TGT] LLM matched to entity: {matched_entity} (confidence: {llm_decision['confidence']:.2f})")
+
+                    # Step 4: Update alias if needed
+                    if llm_decision["is_alias"] and llm_decision["suggested_alias"]:
+                        success = self.tgt_library.add_alias(
+                            matched_entity,
+                            llm_decision["suggested_alias"]
+                        )
+                        if success:
+                            logger.info(f"[TGT] Added alias: '{llm_decision['suggested_alias']}' → '{matched_entity}'")
+
+                    tgt_data["tgt"] = matched_entity
+                    tgt_data["_tgt_metadata"] = {
+                        "matched_entity": matched_entity,
+                        "match_type": "vector_llm",
+                        "confidence": llm_decision["confidence"],
+                        "original_tgt": raw_tgt,
+                        "reasoning": llm_decision["reasoning"]
+                    }
+                    return json.dumps(tgt_data, ensure_ascii=False)
+
+            # Step 5: Check specificity before creating new entity
+            specificity_check = self.tgt_library.check_specificity(raw_tgt, self.llm)
+
+            if not specificity_check["is_specific"]:
+                logger.warning(f"[TGT] Rejected generic entity: {raw_tgt} - {specificity_check['reason']}")
+                tgt_data["_tgt_metadata"] = {
+                    "match_type": "rejected",
+                    "reason": "too_generic",
+                    "details": specificity_check["reason"],
+                    "suggestion": specificity_check["suggested_refinement"]
+                }
+                return json.dumps(tgt_data, ensure_ascii=False)
+
+            # Step 6: Create new entity
+            try:
+                new_entity_id = self.tgt_library.create_entity({
+                    "standard_name": raw_tgt,
+                    "full_name": raw_tgt,
+                    "aliases": [],
+                    "category": self._extract_category(tgt_data),
+                    "description": tgt_data.get("Explanation", ""),
+                    "verification_status": "auto_generated",
+                })
+
+                logger.info(f"[TGT] Created new entity: {raw_tgt} (ID: {new_entity_id})")
+                tgt_data["_tgt_metadata"] = {
+                    "matched_entity_id": new_entity_id,
+                    "match_type": "new_entity",
+                    "confidence": specificity_check["confidence"]
+                }
+            except Exception as e:
+                logger.error(f"[TGT] Failed to create entity: {e}")
+                tgt_data["_tgt_metadata"] = {
+                    "match_type": "error",
+                    "error": str(e)
+                }
+
+            return json.dumps(tgt_data, ensure_ascii=False)
+
+        except json.JSONDecodeError as e:
+            logger.error(f"[TGT] Failed to parse answer as JSON: {e}")
+            return answer
+        except Exception as e:
+            logger.error(f"[TGT] Standardization error: {e}")
+            return answer
+
+    def _check_tgt_similarity(
+        self,
+        new_tgt: str,
+        explanation: str,
+        candidates: List[Dict]
+    ) -> Dict:
+        """Use LLM to check if new tgt belongs to any candidate entity.
+
+        Args:
+            new_tgt: New TGT name
+            explanation: Explanation from synthesis
+            candidates: Candidate entities from vector search
+
+        Returns:
+            Dict with match_found, matched_standard_name, is_alias,
+            suggested_alias, confidence, reasoning
+        """
+        try:
+            prompt = apply_prompt_variables(
+                "tgt_similarity_check",
+                variables={
+                    "new_tgt": new_tgt,
+                    "new_explanation": explanation,
+                    "candidates": candidates
+                },
+                locale=self.locale
+            )
+
+            response = self.llm.invoke([{"role": "user", "content": prompt}])
+            result = self._parse_json_response(response.content)
+
+            return {
+                "match_found": result.get("match_found", False),
+                "matched_standard_name": result.get("matched_standard_name"),
+                "is_alias": result.get("is_alias", False),
+                "suggested_alias": result.get("suggested_alias"),
+                "confidence": result.get("confidence", 0.0),
+                "reasoning": result.get("reasoning", "")
+            }
+
+        except Exception as e:
+            logger.error(f"[TGT] Error in similarity check: {e}")
+            return {
+                "match_found": False,
+                "matched_standard_name": None,
+                "is_alias": False,
+                "suggested_alias": None,
+                "confidence": 0.0,
+                "reasoning": f"Error: {e}"
+            }
+
+    def _parse_json_response(self, content: str) -> Dict:
+        """Parse JSON from LLM response, handling markdown code blocks.
+
+        Args:
+            content: Raw LLM response
+
+        Returns:
+            Parsed JSON dict
+        """
+        import json
+
+        content = content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        elif content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+
+        content = content.strip()
+        return json.loads(content)
+
+    def _extract_category(self, tgt_data: Dict) -> str:
+        """Extract entity category from TGT data.
+
+        Args:
+            tgt_data: TGT data dict
+
+        Returns:
+            Category string
+        """
+        explanation = tgt_data.get("Explanation", "").lower()
+
+        # Simple rule-based category extraction
+        if "云服务" in explanation or "cloud" in explanation:
+            return "云服务提供商"
+        elif "导航" in explanation or "定位" in explanation or "navigation" in explanation:
+            return "导航定位服务"
+        elif "社交" in explanation or "social" in explanation:
+            return "社交平台"
+        elif "视频" in explanation or "video" in explanation:
+            return "视频平台"
+        elif "音乐" in explanation or "music" in explanation:
+            return "音乐服务"
+        elif "支付" in explanation or "payment" in explanation:
+            return "支付服务"
+        elif "cdn" in explanation:
+            return "CDN服务"
+        else:
+            return "其他"
 
 
 # Decision functions (these are pure Python, no LLM involved!)

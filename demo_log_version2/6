@@ -1,0 +1,204 @@
+ sni_search  uv run  python .\demo\test_multi_round_search.py
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "output_schema" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+E:\sni_search\.venv\Lib\site-packages\langchain_tavily\tavily_research.py:97: UserWarning: Field name "stream" in "TavilyResearch" shadows an attribute in parent "BaseTool"
+  class TavilyResearch(BaseTool):  # type: ignore[override, override]
+2025-12-26 20:43:20,426 - __main__ - INFO - ================================================================================
+2025-12-26 20:43:20,427 - __main__ - INFO - Testing Multi-Round Iterative Search Workflow
+2025-12-26 20:43:20,427 - __main__ - INFO - ================================================================================
+2025-12-26 20:43:20,427 - __main__ - INFO -
+Test Query: shuc-pc-hunt.ksord.com
+
+2025-12-26 20:43:20,427 - src.graph.builder - INFO - [create_sni_graph] Building multi-round SNI search workflow
+2025-12-26 20:43:20,495 - httpx - INFO - HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-12-26 20:43:20,501 - src.graph.builder - INFO - [_create_llm] Creating OpenAI LLM: gpt-5.1-chat-latest
+2025-12-26 20:43:20,646 - src.graph.builder - INFO - [create_sni_graph] Multi-round workflow compiled successfully
+2025-12-26 20:43:20,646 - src.graph.builder - INFO -
+    New workflow structure:
+
+    START → sni_exact_query
+              ↓
+              ├─[has results]─→ synthesize → END
+              └─[no results]──→ vector_search
+                                  ↓
+                                  initial_web_search (direct SNI search)
+                                  ↓
+                                  keyword_extraction (extract keywords from vector + web)
+                                  ↓
+                                  round1_planning (LLM generates 4 queries using keywords)
+                                  ↓
+                                  round1_search (4 parallel searches)
+                                  ↓
+                                  round2_planning (LLM extracts 2 keywords)
+                                  ↓
+                                  round2_search (2 parallel searches)
+                                  ↓
+                                  final_planning (LLM generates final query)
+                                  ↓
+                                  final_search (1 comprehensive search)
+                                  ↓
+                                  synthesize → END
+
+    Total: Up to 8 web searches (1 initial + 4 round1 + 2 round2 + 1 final)
+
+2025-12-26 20:43:20,647 - __main__ - INFO - Starting multi-round workflow execution...
+
+2025-12-26 20:43:20,648 - src.graph.nodes - INFO - [sni_exact_query_node] Querying exact match for: shuc-pc-hunt.ksord.com
+2025-12-26 20:43:20,667 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/scroll "HTTP/1.1 200 OK"
+2025-12-26 20:43:20,667 - src.graph.nodes - INFO - [sni_exact_query_node] Found 2 results
+2025-12-26 20:43:20,668 - src.graph.nodes - INFO - [Decision] No exact results → try vector search
+2025-12-26 20:43:20,669 - src.graph.nodes - INFO - [sni_vector_query_node] Querying vector similarity for: shuc-pc-hunt.ksord.com
+2025-12-26 20:43:20,671 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2025-12-26 20:43:20,671 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Batches: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 49.98it/s]
+2025-12-26 20:43:27,473 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/sni_domain_mapping/points/query "HTTP/1.1 200 OK"
+2025-12-26 20:43:27,474 - src.graph.nodes - INFO - [sni_vector_query_node] Found 5 results
+2025-12-26 20:43:27,475 - src.graph.nodes - INFO - [initial_web_search_node] Crawling homepage for: shuc-pc-hunt.ksord.com
+2025-12-26 20:43:27,475 - src.graph.nodes - INFO - [initial_web_search_node] Trying HTTPS: https://shuc-pc-hunt.ksord.com
+2025-12-26 20:43:27,477 - src.tools.crawler.crawler - INFO - Selecting Jina crawler engine
+2025-12-26 20:43:27,477 - src.tools.crawler.crawler - INFO - Crawling URL: https://shuc-pc-hunt.ksord.com using JinaClient
+2025-12-26 20:43:27,477 - src.tools.crawler.jina_client - WARNING - Jina API key is not set. Provide your own key to access a higher rate limit. See https://jina.ai/reader for more information.
+2025-12-26 20:43:28,812 - src.tools.crawler.jina_client - ERROR - Jina API returned empty response
+2025-12-26 20:43:28,814 - src.tools.crawler.crawler - WARNING - Non-HTML content received from URL https://shuc-pc-hunt.ksord.com, creating fallback article
+2025-12-26 20:43:28,814 - src.graph.nodes - INFO - [initial_web_search_node] Successfully crawled via HTTPS (129 chars, title: 'Non-HTML Content')
+2025-12-26 20:43:28,815 - src.graph.nodes - INFO - [keyword_extraction_node] Extracting keywords from vector results and initial web search
+2025-12-26 20:43:29,281 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 20:43:33,097 - src.graph.nodes - INFO - [keyword_extraction_node] Extracted keywords: ['ksord', 'WPS', 'kdocs']
+2025-12-26 20:43:33,098 - src.graph.nodes - INFO - [keyword_extraction_node] Enhanced query: shuc-pc-hunt.ksord.com ksord WPS kdocs
+2025-12-26 20:43:33,098 - src.graph.nodes - INFO - [keyword_extraction_node] Reasoning: The only relevant similarity in vector results is the related SNI shuc-js.ksord.com, which connects ksord.com subdomains to WPS-associated domains (wps.cn, wpscdn.cn, kdocs.cn). These terms may help identify the service behind shuc-pc-hunt.ksord.com.
+2025-12-26 20:43:33,098 - src.graph.nodes - INFO - [round1_planning_node] Generating round 1 queries for: shuc-pc-hunt.ksord.com
+2025-12-26 20:43:33,098 - src.graph.nodes - INFO - [round1_planning_node] Using extracted keywords: ['ksord', 'WPS', 'kdocs']
+2025-12-26 20:43:33,258 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 20:43:35,468 - src.graph.nodes - INFO - [round1_planning_node] Generated queries: ['ksord.com wps', 'ksord kdocs', 'wps ksord', 'kdocs ksord.com']
+2025-12-26 20:43:35,468 - src.graph.nodes - INFO - [round1_planning_node] Reasoning: Used the suffix ksord.com combined with provided keywords in varied order and combinations.
+2025-12-26 20:43:35,469 - src.graph.nodes - INFO - [round1_parallel_search_node] Executing 4 parallel searches
+2025-12-26 20:43:35,470 - src.tools.search - INFO - Tavily search configuration loaded: include_domains=[], exclude_domains=[], include_answer=False, search_depth=advanced, include_raw_content=True, include_images=True, include_image_descriptions=True
+2025-12-26 20:43:35,470 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: ksord.com wps
+2025-12-26 20:43:35,470 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: ksord kdocs
+2025-12-26 20:43:35,470 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: wps ksord
+2025-12-26 20:43:35,470 - src.graph.nodes - INFO - [round1_parallel_search_node] Searching: kdocs ksord.com
+2025-12-26 20:43:41,987 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://en.wikipedia.org/wiki/WPS_Office
+2025-12-26 20:43:41,987 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://apps.apple.com/us/app/wps-office-pdf-docs-sheets/id1491101673
+2025-12-26 20:43:41,987 - src.tools.search_postprocessor - INFO - Search result post-processing: 10 -> 10
+2025-12-26 20:43:42,442 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://forgejo.multiname.org/a-text/atextcrawler/commit/a6af5b12d23650bb8942a562560f3ab8b535271e.diff
+2025-12-26 20:43:42,443 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://patch-diff.githubusercontent.com/raw/v2ray/v2ray-core/pull/2667.diff
+2025-12-26 20:43:42,443 - src.tools.search_postprocessor - INFO - Search result post-processing: 10 -> 10
+2025-12-26 20:43:45,160 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/9da140144ce706f034b7e023d09dc6c1be0b093e6983b79331a84f8ef9d0cbb9/ce62d84b-a213-499a-965a-1e4664e7e471
+2025-12-26 20:43:45,160 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://en.wikipedia.org/wiki/WPS_Office
+2025-12-26 20:43:45,160 - src.tools.search_postprocessor - INFO - Search result post-processing: 10 -> 10
+2025-12-26 20:43:46,407 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://github.com/Kotlin/dokka
+2025-12-26 20:43:46,407 - src.tools.search_postprocessor - INFO - Search result post-processing: 10 -> 10
+2025-12-26 20:43:46,408 - src.graph.nodes - INFO - [round1_parallel_search_node] Completed 4/4 searches
+2025-12-26 20:43:46,408 - src.graph.nodes - INFO - [round2_planning_node] Generating Round2 queries from 4 Round1 results
+2025-12-26 20:43:46,844 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 20:43:48,867 - src.graph.nodes - INFO - [round2_planning_node] Discovered organization: Kingsoft Office
+2025-12-26 20:43:48,867 - src.graph.nodes - INFO - [round2_planning_node] Generated queries: ['shuc-pc-hunt kingsoft office wps', 'shuc-pc hunt ksord kingsoft']
+2025-12-26 20:43:48,868 - src.graph.nodes - INFO - [round2_planning_node] Reasoning: Used prefix components combined with the identified organization and known keyword wps.
+2025-12-26 20:43:48,869 - src.graph.nodes - INFO - [round2_parallel_search_node] Executing 2 parallel searches
+2025-12-26 20:43:48,870 - src.tools.search - INFO - Tavily search configuration loaded: include_domains=[], exclude_domains=[], include_answer=False, search_depth=advanced, include_raw_content=True, include_images=True, include_image_descriptions=True
+2025-12-26 20:43:48,870 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: shuc-pc-hunt kingsoft office wps
+2025-12-26 20:43:48,871 - src.graph.nodes - INFO - [round2_parallel_search_node] Searching: shuc-pc hunt ksord kingsoft
+2025-12-26 20:43:55,678 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/1959b9576a21cec87469141517c0da557761fa07706168c947224f6e8694419f/962a5260-bdab-413a-9c54-1f61d6e80118
+2025-12-26 20:43:55,678 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/a58da52b5bbe80c1a49c4465e4e6c14ecb787195d7d2b788da8d74772b96b665/db37411a-5ec9-4a64-a73a-57166fe976c6
+2025-12-26 20:43:55,678 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/2a8efc3cb54af30072cd7487f6f12952ef0b56f2914f09dc17dea5a51468fd5e/fc0829cb-dad2-4fa1-a1f5-79100c9e6982
+2025-12-26 20:43:55,678 - src.tools.search_postprocessor - INFO - Search result post-processing: 10 -> 10
+2025-12-26 20:43:55,869 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://en.wikipedia.org/wiki/WPS_Office
+2025-12-26 20:43:55,869 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/2b7a3508255b54e2a3f7bf877befd6e319356c717c57717e298bd467d31b38e3/b6801252-979e-4cd4-b4f3-04100a0ea220
+2025-12-26 20:43:55,869 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/2a8efc3cb54af30072cd7487f6f12952ef0b56f2914f09dc17dea5a51468fd5e/fc0829cb-dad2-4fa1-a1f5-79100c9e6982
+2025-12-26 20:43:55,869 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://apps.apple.com/us/app/wps-office-pdf-docs-sheets/id1491101673
+2025-12-26 20:43:55,870 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://nerdbot.com/2025/12/21/wps-office-a-smart-flexible-and-modern-productivity-suite/
+2025-12-26 20:43:55,870 - src.tools.search_postprocessor - INFO - Search result post-processing: 10 -> 10
+2025-12-26 20:43:55,870 - src.graph.nodes - INFO - [round2_parallel_search_node] Completed 2/2 searches
+2025-12-26 20:43:55,871 - src.graph.nodes - INFO - [final_search_planning_node] Generating final verification query
+2025-12-26 20:43:55,871 - src.graph.nodes - INFO - [final_search_planning_node] Using Round 2 keywords: ['shuc-pc-hunt kingsoft office wps', 'shuc-pc hunt ksord kingsoft']
+2025-12-26 20:43:56,304 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 20:43:58,785 - src.graph.nodes - INFO - [final_search_planning_node] Final query: shuc-pc-hunt.ksord.com shuc-pc-hunt kingsoft office wps ksord
+2025-12-26 20:43:58,785 - src.graph.nodes - INFO - [final_search_planning_node] Reasoning: Combines the full SNI with all Round 2 keywords to maximize verification of associating ksord with Kingsoft/WPS.
+2025-12-26 20:43:58,785 - src.graph.nodes - INFO - [final_search_node] Executing final search: shuc-pc-hunt.ksord.com shuc-pc-hunt kingsoft office wps ksord
+2025-12-26 20:43:58,786 - src.tools.search - INFO - Tavily search configuration loaded: include_domains=[], exclude_domains=[], include_answer=False, search_depth=advanced, include_raw_content=True, include_images=True, include_image_descriptions=True
+2025-12-26 20:44:06,146 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/a58da52b5bbe80c1a49c4465e4e6c14ecb787195d7d2b788da8d74772b96b665/db37411a-5ec9-4a64-a73a-57166fe976c6
+2025-12-26 20:44:06,146 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/2a8efc3cb54af30072cd7487f6f12952ef0b56f2914f09dc17dea5a51468fd5e/fc0829cb-dad2-4fa1-a1f5-79100c9e6982
+2025-12-26 20:44:06,147 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://any.run/report/2b7a3508255b54e2a3f7bf877befd6e319356c717c57717e298bd467d31b38e3/b6801252-979e-4cd4-b4f3-04100a0ea220
+2025-12-26 20:44:06,147 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://sandbox.ti.qianxin.com/sandbox/page/detail?type=file&id=56e33af9f3cd978fd2f38a5ba4a27f2099901977
+2025-12-26 20:44:06,147 - src.tools.search_postprocessor - INFO - Truncated long raw content from search result: https://www.shouldiremoveit.com/wps-office-for-asus-165598-program.aspx
+2025-12-26 20:44:06,147 - src.tools.search_postprocessor - INFO - Search result post-processing: 10 -> 10
+2025-12-26 20:44:06,148 - src.graph.nodes - INFO - [final_search_node] Final search completed
+2025-12-26 20:44:06,148 - src.graph.nodes - INFO - [synthesize_node] Synthesizing final answer from all sources
+2025-12-26 20:44:06,148 - src.graph.nodes - INFO - [synthesize_node] Context size: 4704 chars
+2025-12-26 20:44:06,576 - httpx - INFO - HTTP Request: POST https://api.lingyaai.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-12-26 20:44:11,218 - src.graph.nodes - INFO - [synthesize_node] Generated comprehensive answer from 6 sources
+2025-12-26 20:44:11,218 - __main__ - INFO -
+================================================================================
+2025-12-26 20:44:11,218 - __main__ - INFO - WORKFLOW EXECUTION RESULTS
+2025-12-26 20:44:11,219 - __main__ - INFO - ================================================================================
+2025-12-26 20:44:11,219 - __main__ - INFO -
+Original Query: shuc-pc-hunt.ksord.com
+2025-12-26 20:44:11,219 - __main__ - INFO -
+[1] Exact Match: Found 0 matches
+2025-12-26 20:44:11,219 - __main__ - INFO -
+[2] Vector Search: 5 results
+2025-12-26 20:44:11,219 - __main__ - INFO -   1. SNI: shuc-js.ksord.com, Domain: wpscdn.cn, Score: 0.795
+2025-12-26 20:44:11,219 - __main__ - INFO -   2. SNI: shuc-js.ksord.com, Domain: wps.cn, Score: 0.795
+2025-12-26 20:44:11,220 - __main__ - INFO -   3. SNI: shuc-js.ksord.com, Domain: kdocs.cn, Score: 0.795
+2025-12-26 20:44:11,220 - __main__ - INFO -
+[3] Initial Web Search: Completed (129 chars)
+2025-12-26 20:44:11,220 - __main__ - INFO -   Preview: # Non-HTML Content
+
+This URL returned content that cannot be parsed as HTML. Raw content: Error: Jina API returned empty response...
+2025-12-26 20:44:11,220 - __main__ - INFO -
+[4] Round 1 Planning: Generated 4 queries
+2025-12-26 20:44:11,220 - __main__ - INFO -   1. ksord.com wps
+2025-12-26 20:44:11,220 - __main__ - INFO -   2. ksord kdocs
+2025-12-26 20:44:11,220 - __main__ - INFO -   3. wps ksord
+2025-12-26 20:44:11,220 - __main__ - INFO -   4. kdocs ksord.com
+2025-12-26 20:44:11,220 - __main__ - INFO -
+[5] Round 1 Search: Completed 4/4 searches
+2025-12-26 20:44:11,221 - __main__ - INFO -   1. ksord.com wps: Success
+2025-12-26 20:44:11,221 - __main__ - INFO -   2. ksord kdocs: Success
+2025-12-26 20:44:11,221 - __main__ - INFO -   3. wps ksord: Success
+2025-12-26 20:44:11,221 - __main__ - INFO -   4. kdocs ksord.com: Success
+2025-12-26 20:44:11,221 - __main__ - INFO -
+[6] Round 2 Planning: Extracted 2 keywords
+2025-12-26 20:44:11,221 - __main__ - INFO -   1. shuc-pc-hunt kingsoft office wps
+2025-12-26 20:44:11,221 - __main__ - INFO -   2. shuc-pc hunt ksord kingsoft
+2025-12-26 20:44:11,221 - __main__ - INFO -
+[7] Round 2 Search: Completed 2/2 searches
+2025-12-26 20:44:11,222 - __main__ - INFO -   1. shuc-pc-hunt kingsoft office wps: Success
+2025-12-26 20:44:11,222 - __main__ - INFO -   2. shuc-pc hunt ksord kingsoft: Success
+2025-12-26 20:44:11,222 - __main__ - INFO -
+[8] Final Search Planning: shuc-pc-hunt.ksord.com shuc-pc-hunt kingsoft office wps ksord
+2025-12-26 20:44:11,222 - __main__ - INFO -
+[9] Final Search: Completed (61552 chars)
+2025-12-26 20:44:11,222 - __main__ - INFO -   Preview: [{"type": "page", "title": "Malware analysis wps_office_inst.exe Malicious activity - ANY.RUN", "url": "https://any.run/report/a58da52b5bbe80c1a49c4465e4e6c14ecb787195d7d2b788da8d74772b96b665/db37411a...
+2025-12-26 20:44:11,222 - __main__ - INFO -
+[10] Final Answer Synthesis:
+2025-12-26 20:44:11,222 - __main__ - INFO -   {
+  "tgt": "WPS Office / Kingsoft Office client service endpoint",
+  "Explanation": "This SNI belongs to backend infrastructure used by WPS Office (Kingsoft Office) for client functions such as updates, telemetry, or cloud‑linked service operations. It is operated by Zhuhai Kingsoft Office Software Co., Ltd.",
+  "Query Results": "ksord.com is identified as a Kingsoft Office domain; similar SNIs like shuc-pc.ksord.com appear in WPS Office execution traces and malware-sandbox analyses linked to of...
+2025-12-26 20:44:11,222 - __main__ - INFO -
+================================================================================
+2025-12-26 20:44:11,223 - __main__ - INFO - TEST SUMMARY
+2025-12-26 20:44:11,223 - __main__ - INFO - ================================================================================
+2025-12-26 20:44:11,223 - __main__ - INFO -
+Total Web Searches Executed: 8/8
+2025-12-26 20:44:11,223 - __main__ - INFO - Success Criteria Met: 6/6
+2025-12-26 20:44:11,224 - __main__ - INFO -
+Criteria:
+2025-12-26 20:44:11,224 - __main__ - INFO -   - Vector search completed
+2025-12-26 20:44:11,224 - __main__ - INFO -   - Initial web search completed
+2025-12-26 20:44:11,224 - __main__ - INFO -   - Round 1: 4/4 searches completed
+2025-12-26 20:44:11,224 - __main__ - INFO -   - Round 2: 2/2 searches completed
+2025-12-26 20:44:11,224 - __main__ - INFO -   - Final search completed
+2025-12-26 20:44:11,224 - __main__ - INFO -   - Final answer synthesized
+2025-12-26 20:44:11,224 - __main__ - INFO -
+================================================================================
+2025-12-26 20:44:11,224 - __main__ - INFO - WORKFLOW PERFORMANCE
+2025-12-26 20:44:11,224 - __main__ - INFO - ================================================================================
+2025-12-26 20:44:11,225 - __main__ - INFO -
+Search Depth: 8 rounds
+2025-12-26 20:44:11,225 - __main__ - INFO - Query Diversification: Round 1 used 4 different angles
+2025-12-26 20:44:11,225 - __main__ - INFO - Keyword Refinement: Round 2 focused on 2 core topics
+2025-12-26 20:44:11,225 - __main__ - INFO - Comprehensive Coverage: Yes
+2025-12-26 20:44:11,225 - __main__ - INFO -
+================================================================================

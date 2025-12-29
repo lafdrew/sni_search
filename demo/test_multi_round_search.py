@@ -19,7 +19,7 @@ async def test_multi_round_search():
     logger.info("Testing Multi-Round Iterative Search Workflow")
     logger.info("=" * 80)
 
-    test_query = "tclandroidicsapp.accu-weather.com"
+    test_query = "www.bilibili.com"
 
     logger.info(f"\nTest Query: {test_query}\n")
 
@@ -46,6 +46,11 @@ async def test_multi_round_search():
     logger.info("Starting multi-round workflow execution...\n")
 
     result = await graph.ainvoke(initial_state)
+
+    # Handle case where result is None or empty
+    if result is None:
+        logger.error("Workflow returned None - execution failed")
+        return None
 
     logger.info("\n" + "=" * 80)
     logger.info("WORKFLOW EXECUTION RESULTS")
@@ -155,8 +160,14 @@ async def test_multi_round_search():
     logger.info("=" * 80)
 
     logger.info(f"\nSearch Depth: {total_searches} rounds")
-    logger.info(f"Query Diversification: Round 1 used {len(result.get('round1_queries', []))} different angles")
-    logger.info(f"Keyword Refinement: Round 2 focused on {len(result.get('round2_keywords', []))} core topics")
+
+    # Safely access result fields with proper None checks
+    # Use 'or []' to handle both missing keys and None values
+    round1_queries = (result.get('round1_queries') or []) if result else []
+    round2_keywords = (result.get('round2_keywords') or []) if result else []
+
+    logger.info(f"Query Diversification: Round 1 used {len(round1_queries)} different angles")
+    logger.info(f"Keyword Refinement: Round 2 focused on {len(round2_keywords)} core topics")
     logger.info(f"Comprehensive Coverage: {'Yes' if total_searches >= 7 else 'Partial'}")
 
     logger.info("\n" + "=" * 80)

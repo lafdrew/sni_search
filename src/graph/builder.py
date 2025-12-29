@@ -25,7 +25,7 @@ def _create_llm(
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
     temperature: float = 0,
-    max_tokens: int = 200000,
+    max_tokens: int = 8000,
 ):
     """Create LLM instance based on provider.
 
@@ -116,7 +116,7 @@ def create_sni_graph(
         model=model,
         api_key=api_key,
         temperature=0,
-        max_tokens=200000,
+        max_tokens=8000,
     )
 
     nodes = SNIWorkflowNodes(tools_instance, llm, locale)
