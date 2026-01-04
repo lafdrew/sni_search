@@ -126,7 +126,8 @@ class SNIWorkflowNodes:
                 results_summary = "No vector search results available"
 
             if initial_search_result:
-                initial_summary = initial_search_result[:500] + "..." if len(initial_search_result) > 500 else initial_search_result
+                # No truncation - keep full initial search result for accurate keyword extraction
+                initial_summary = initial_search_result
             else:
                 initial_summary = "No initial search content available"
 
@@ -298,50 +299,59 @@ class SNIWorkflowNodes:
         logger.info(f"[synthesize_node] Synthesizing final answer from all sources")
 
         try:
-            MAX_CONTEXT_CHARS = 15000
+            # Removed aggressive truncation - using full context for better accuracy
+            # Modern LLMs (Claude Sonnet 4.5: 200K tokens, GPT-4: 128K tokens) can handle much larger contexts
+            MAX_CONTEXT_CHARS = settings.MAX_CONTEXT_CHARS  # Configurable via .env
             context_parts = []
 
             if state.get("sni_exact_results"):
-                exact_str = str(state['sni_exact_results'])[:500]
+                # No truncation - keep full exact match results
+                exact_str = str(state['sni_exact_results'])
                 context_parts.append(f"**SNI Exact Match Results:**\n{exact_str}")
 
             vector_results = state.get("sni_vector_results") or []
             if vector_results:
+                # Include all vector results, not just top 3
                 vector_summary = "\n".join([
                     f"  - SNI: {r.get('sni')}, Domain: {r.get('domain')}, Score: {r.get('score', 0):.2f}"
-                    for r in vector_results[:3]
+                    for r in vector_results[:5]
                 ])
                 context_parts.append(f"**SNI Vector Search Results:**\n{vector_summary}")
 
             if state.get("initial_search_result"):
-                initial_preview = str(state['initial_search_result'])[:800]
-                context_parts.append(f"**Initial Web Search:**\n{initial_preview}")
+                # No truncation - keep full initial search content
+                initial_full = str(state['initial_search_result'])
+                context_parts.append(f"**Initial Web Search:**\n{initial_full}")
 
             round1_results = state.get("round1_results") or []
             if round1_results:
+                # No truncation - keep full Round1 results for better accuracy
                 round1_summary = "\n".join([
-                    f"  - Query: {r.get('query')[:80]}\n    Result: {str(r.get('result', ''))[:400]}"
+                    f"  - Query: {r.get('query')}\n    Result: {str(r.get('result', ''))}"
                     for r in round1_results[:4]
                 ])
                 context_parts.append(f"**Round 1 Searches (4 queries):**\n{round1_summary}")
 
             round2_results = state.get("round2_results") or []
             if round2_results:
+                # No truncation - keep full Round2 results
                 round2_summary = "\n".join([
-                    f"  - Keyword: {r.get('keyword')}\n    Result: {str(r.get('result', ''))[:400]}"
+                    f"  - Keyword: {r.get('keyword')}\n    Result: {str(r.get('result', ''))}"
                     for r in round2_results[:2]
                 ])
                 context_parts.append(f"**Round 2 Searches (2 keywords):**\n{round2_summary}")
 
             if state.get("final_search_result"):
-                final_preview = str(state['final_search_result'])[:1500]
-                context_parts.append(f"**Final Comprehensive Search:**\n{final_preview}")
+                # No truncation - keep full final search result
+                final_full = str(state['final_search_result'])
+                context_parts.append(f"**Final Comprehensive Search:**\n{final_full}")
 
             context = "\n\n".join(context_parts)
 
+            # Safety check: only truncate if context is extremely large (> 500K chars)
             if len(context) > MAX_CONTEXT_CHARS:
-                logger.warning(f"[synthesize_node] Context too large ({len(context)} chars), truncating to {MAX_CONTEXT_CHARS}")
-                context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated due to size limit]"
+                logger.warning(f"[synthesize_node] Context extremely large ({len(context)} chars), truncating to {MAX_CONTEXT_CHARS}")
+                context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated due to safety limit - please review search configuration]"
 
             logger.info(f"[synthesize_node] Context size: {len(context)} chars")
 
@@ -415,7 +425,8 @@ class SNIWorkflowNodes:
                 markdown_content = article.to_markdown()
 
                 if markdown_content and markdown_content.strip():
-                    result = markdown_content[:10000]
+                    # No truncation - keep full crawled content for better analysis
+                    result = markdown_content
                     logger.info(f"[initial_web_search_node] Successfully crawled via HTTPS ({len(result)} chars, title: '{article.title}')")
                 else:
                     logger.warning(f"[initial_web_search_node] HTTPS returned empty content")
@@ -432,7 +443,8 @@ class SNIWorkflowNodes:
                     markdown_content = article.to_markdown()
 
                     if markdown_content and markdown_content.strip():
-                        result = markdown_content[:10000]
+                        # No truncation - keep full crawled content
+                        result = markdown_content
                         logger.info(f"[initial_web_search_node] Successfully crawled via HTTP ({len(result)} chars, title: '{article.title}')")
                     else:
                         logger.warning(f"[initial_web_search_node] HTTP returned empty content")
@@ -606,8 +618,9 @@ class SNIWorkflowNodes:
             return {"round2_keywords": [query, query]}
 
         try:
+            # No truncation - keep full Round1 results for better Round2 planning
             results_summary = "\n\n".join([
-                f"Query: {r.get('query')}\nResult Preview: {str(r.get('result', ''))[:500]}..."
+                f"Query: {r.get('query')}\nResult: {str(r.get('result', ''))}"
                 for r in round1_results[:4]
             ])
 

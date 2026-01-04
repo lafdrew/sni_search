@@ -112,6 +112,18 @@ class Settings(BaseSettings):
     CRAWLER_ENGINE: str
     CRAWLER_TIMEOUT: int = 30
 
+    # Context Management Configuration
+    # Max context size for synthesis (chars). Modern LLMs support 200K+ tokens (~600K chars)
+    MAX_CONTEXT_CHARS: int = 500000  # ~150K tokens, safe for Claude/GPT-4
+
+    # Legacy truncation settings (set to 0 to disable truncation)
+    # These are kept for backward compatibility but default to 0 (no truncation)
+    TRUNCATE_EXACT_RESULTS: int = 0  # 0 = no truncation
+    TRUNCATE_INITIAL_SEARCH: int = 0
+    TRUNCATE_ROUND1_RESULTS: int = 0
+    TRUNCATE_ROUND2_RESULTS: int = 0
+    TRUNCATE_FINAL_SEARCH: int = 0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
