@@ -45,3 +45,7 @@ class SNIAgentState(TypedDict):
     round2_results: Optional[List[Dict[str, Any]]]
     final_search_query: Optional[str]
     final_search_result: Optional[str]
+
+    # TGT 标准化相关字段
+    raw_answer: Optional[str]  # synthesize 节点生成的原始答案
+    tgt_metadata: Optional[Dict[str, Any]]  # TGT 标准化元数据

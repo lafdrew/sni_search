@@ -61,16 +61,40 @@ class SNIWorkflowNodes:
         Returns:
             Updated state with exact query results
         """
+        import time
+        start_time = time.time()
+
         query = state["query"]
+
+        # Log node input
+        logger.info(f"\n{'='*80}")
+        logger.info(f"[sni_exact_query_node] INPUT")
+        logger.info(f"{'='*80}")
+        logger.info(f"Query: {query}")
+        logger.info(f"{'='*80}\n")
+
         logger.info(f"[sni_exact_query_node] Querying exact match for: {query}")
 
         try:
             results = self.tools.search_sni_exact(query)
-            logger.info(f"[sni_exact_query_node] Found {len(results) if results else 0} results")
+            elapsed = time.time() - start_time
+
+            # Log node output
+            logger.info(f"\n{'='*80}")
+            logger.info(f"[sni_exact_query_node] OUTPUT (in {elapsed:.3f}s)")
+            logger.info(f"{'='*80}")
+            if results and results.get("found"):
+                logger.info(f"Found: {results.get('match_count', 0)} matches")
+                for i, match in enumerate(results.get('matches', [])[:2], 1):
+                    logger.info(f"  {i}. SNI: {match.get('sni')}, Domain: {match.get('domain')}")
+            else:
+                logger.info(f"Found: No matches")
+            logger.info(f"{'='*80}\n")
 
             return {"sni_exact_results": results}
         except Exception as e:
-            logger.error(f"[sni_exact_query_node] Error: {e}")
+            elapsed = time.time() - start_time
+            logger.error(f"[sni_exact_query_node] Error after {elapsed:.3f}s: {e}")
             return {"sni_exact_results": None}
 
     def sni_vector_query_node(self, state: SNIAgentState) -> Dict[str, Any]:
@@ -296,6 +320,9 @@ class SNIWorkflowNodes:
         Returns:
             Updated state with final answer
         """
+        import time
+        node_start_time = time.time()
+
         logger.info(f"[synthesize_node] Synthesizing final answer from all sources")
 
         try:
@@ -304,46 +331,47 @@ class SNIWorkflowNodes:
             MAX_CONTEXT_CHARS = settings.MAX_CONTEXT_CHARS  # Configurable via .env
             context_parts = []
 
+            # Build context with detailed logging
             if state.get("sni_exact_results"):
-                # No truncation - keep full exact match results
                 exact_str = str(state['sni_exact_results'])
+                logger.info(f"[synthesize_node] SNI exact results: {len(exact_str)} chars")
                 context_parts.append(f"**SNI Exact Match Results:**\n{exact_str}")
 
             vector_results = state.get("sni_vector_results") or []
             if vector_results:
-                # Include all vector results, not just top 3
                 vector_summary = "\n".join([
                     f"  - SNI: {r.get('sni')}, Domain: {r.get('domain')}, Score: {r.get('score', 0):.2f}"
                     for r in vector_results[:5]
                 ])
+                logger.info(f"[synthesize_node] Vector results: {len(vector_summary)} chars, {len(vector_results)} results")
                 context_parts.append(f"**SNI Vector Search Results:**\n{vector_summary}")
 
             if state.get("initial_search_result"):
-                # No truncation - keep full initial search content
                 initial_full = str(state['initial_search_result'])
+                logger.info(f"[synthesize_node] Initial web search: {len(initial_full)} chars")
                 context_parts.append(f"**Initial Web Search:**\n{initial_full}")
 
             round1_results = state.get("round1_results") or []
             if round1_results:
-                # No truncation - keep full Round1 results for better accuracy
                 round1_summary = "\n".join([
                     f"  - Query: {r.get('query')}\n    Result: {str(r.get('result', ''))}"
                     for r in round1_results[:4]
                 ])
+                logger.info(f"[synthesize_node] Round 1 results: {len(round1_summary)} chars, {len(round1_results)} searches")
                 context_parts.append(f"**Round 1 Searches (4 queries):**\n{round1_summary}")
 
             round2_results = state.get("round2_results") or []
             if round2_results:
-                # No truncation - keep full Round2 results
                 round2_summary = "\n".join([
                     f"  - Keyword: {r.get('keyword')}\n    Result: {str(r.get('result', ''))}"
                     for r in round2_results[:2]
                 ])
+                logger.info(f"[synthesize_node] Round 2 results: {len(round2_summary)} chars, {len(round2_results)} searches")
                 context_parts.append(f"**Round 2 Searches (2 keywords):**\n{round2_summary}")
 
             if state.get("final_search_result"):
-                # No truncation - keep full final search result
                 final_full = str(state['final_search_result'])
+                logger.info(f"[synthesize_node] Final search result: {len(final_full)} chars")
                 context_parts.append(f"**Final Comprehensive Search:**\n{final_full}")
 
             context = "\n\n".join(context_parts)
@@ -353,9 +381,10 @@ class SNIWorkflowNodes:
                 logger.warning(f"[synthesize_node] Context extremely large ({len(context)} chars), truncating to {MAX_CONTEXT_CHARS}")
                 context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated due to safety limit - please review search configuration]"
 
-            logger.info(f"[synthesize_node] Context size: {len(context)} chars")
+            logger.info(f"[synthesize_node] Total context size: {len(context)} chars from {len(context_parts)} sources")
 
             system_prompt = get_prompt_template("sni_agent", locale=state.get("locale", "en-US"))
+            logger.info(f"[synthesize_node] System prompt: {len(system_prompt)} chars")
 
             synthesis_prompt = apply_prompt_variables(
                 "synthesis",
@@ -365,27 +394,59 @@ class SNIWorkflowNodes:
                 },
                 locale=state.get("locale", "en-US")
             )
+            logger.info(f"[synthesize_node] Synthesis prompt: {len(synthesis_prompt)} chars")
 
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": synthesis_prompt}
             ]
 
+            total_chars = sum(len(m.get("content", "")) for m in messages)
+            logger.info(f"[synthesize_node] Total message size: {total_chars} chars ({total_chars/4:.0f} estimated tokens)")
+
+            # Log LLM input (truncated for readability)
+            logger.info(f"\n{'='*80}")
+            logger.info(f"[synthesize_node] LLM INPUT")
+            logger.info(f"{'='*80}")
+            logger.info(f"System Prompt ({len(system_prompt)} chars):")
+            logger.info(f"{system_prompt[:500]}...")
+            logger.info(f"\nUser Prompt ({len(synthesis_prompt)} chars):")
+            logger.info(f"{synthesis_prompt[:1000]}...")
+            logger.info(f"{'='*80}\n")
+
+            # Log LLM call start time
+            import time
+            start_time = time.time()
+            logger.info(f"[synthesize_node] Calling LLM...")
+
             response = self.llm.invoke(messages)
             answer = response.content
+
+            elapsed = time.time() - start_time
+            logger.info(f"[synthesize_node] LLM call completed in {elapsed:.2f} seconds")
+
+            # Log LLM output
+            logger.info(f"\n{'='*80}")
+            logger.info(f"[synthesize_node] LLM OUTPUT ({len(answer)} chars)")
+            logger.info(f"{'='*80}")
+            logger.info(f"{answer}")
+            logger.info(f"{'='*80}\n")
+
+            total_elapsed = time.time() - node_start_time
+            logger.info(f"[synthesize_node] Total node execution time: {total_elapsed:.2f}s (context building: {total_elapsed - elapsed:.2f}s)")
 
             if answer is None:
                 logger.error("[synthesize_node] LLM returned None content")
                 error_answer = '{"tgt": "Error", "Explanation": "LLM returned None", "Query Results": "No content"}'
                 return {"final_answer": error_answer}
 
-            logger.info(f"[synthesize_node] Generated comprehensive answer from {len(context_parts)} sources")
+            logger.info(f"[synthesize_node] Generated comprehensive answer ({len(answer)} chars) from {len(context_parts)} sources")
 
-            # TGT standardization flow
-            if self.tgt_library:
-                answer = self._standardize_tgt(answer, state)
-
-            return {"final_answer": answer}
+            # Return raw_answer for TGT standardization node
+            return {
+                "raw_answer": answer,      # Original answer from LLM
+                "final_answer": answer      # Backward compatible (if TGT skipped)
+            }
 
         except Exception as e:
             import traceback
@@ -825,6 +886,76 @@ class SNIWorkflowNodes:
             logger.error(f"[final_search_node] Error: {e}")
             return {"final_search_result": None}
 
+    def tgt_standardization_node(self, state: SNIAgentState) -> Dict[str, Any]:
+        """Node: Standardize TGT using standard library.
+
+        Independent workflow node that performs TGT standardization.
+        Reuses the existing _standardize_tgt method to avoid code duplication.
+
+        Args:
+            state: Current agent state with raw_answer
+
+        Returns:
+            Updated state with standardized final_answer and tgt_metadata
+        """
+        import time
+        start_time = time.time()
+
+        raw_answer = state.get("raw_answer")
+
+        # Log node input
+        logger.info(f"\n{'='*80}")
+        logger.info(f"[tgt_standardization_node] INPUT")
+        logger.info(f"{'='*80}")
+        logger.info(f"raw_answer ({len(raw_answer) if raw_answer else 0} chars):")
+        if raw_answer:
+            logger.info(f"{raw_answer[:300]}...")
+        else:
+            logger.info(f"None")
+        logger.info(f"{'='*80}\n")
+
+        if not raw_answer:
+            logger.warning("[tgt_standardization_node] No raw_answer available")
+            return {"final_answer": None, "tgt_metadata": None}
+
+        logger.info(f"[tgt_standardization_node] Starting TGT standardization")
+
+        try:
+            # Reuse existing _standardize_tgt method (no code duplication)
+            standardized_answer = self._standardize_tgt(raw_answer, state)
+
+            # Extract tgt_metadata
+            import json
+            answer_data = json.loads(standardized_answer)
+            tgt_metadata = answer_data.get("_tgt_metadata", {})
+
+            elapsed = time.time() - start_time
+
+            # Log node output
+            logger.info(f"\n{'='*80}")
+            logger.info(f"[tgt_standardization_node] OUTPUT (in {elapsed:.3f}s)")
+            logger.info(f"{'='*80}")
+            logger.info(f"Match type: {tgt_metadata.get('match_type', 'unknown')}")
+            logger.info(f"Matched entity ID: {tgt_metadata.get('matched_entity_id', 'N/A')}")
+            logger.info(f"Original TGT: {tgt_metadata.get('original_tgt', 'N/A')}")
+            logger.info(f"Final answer ({len(standardized_answer)} chars):")
+            logger.info(f"{standardized_answer[:300]}...")
+            logger.info(f"{'='*80}\n")
+
+            return {
+                "final_answer": standardized_answer,
+                "tgt_metadata": tgt_metadata
+            }
+
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error(f"[tgt_standardization_node] Error after {elapsed:.3f}s: {e}")
+            # Fallback to raw_answer on error
+            return {
+                "final_answer": raw_answer,
+                "tgt_metadata": {"error": str(e), "match_type": "error"}
+            }
+
     def _standardize_tgt(self, answer: str, state: SNIAgentState) -> str:
         """Standardize TGT using standard library.
 
@@ -838,8 +969,23 @@ class SNIWorkflowNodes:
         try:
             import json
 
+            # Clean answer string before parsing
+            cleaned_answer = answer.strip()
+
+            # Remove markdown code blocks if present
+            if cleaned_answer.startswith("```"):
+                lines = cleaned_answer.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                cleaned_answer = "\n".join(lines).strip()
+
+            # Log the answer for debugging
+            logger.debug(f"[TGT] Raw answer (first 200 chars): {cleaned_answer[:200]}")
+
             # Parse LLM response
-            tgt_data = json.loads(answer)
+            tgt_data = json.loads(cleaned_answer)
             raw_tgt = tgt_data.get("tgt", "Unknown")
 
             # Skip if no valid tgt
@@ -1066,11 +1212,23 @@ def should_try_vector_search(state: SNIAgentState) -> str:
     """
     exact_results = state.get("sni_exact_results")
 
+    # Log decision input
+    logger.info(f"\n{'='*80}")
+    logger.info(f"[Decision] should_try_vector_search")
+    logger.info(f"{'='*80}")
+    logger.info(f"Input State:")
+    logger.info(f"  - exact_results: {exact_results}")
+    if exact_results:
+        logger.info(f"  - found: {exact_results.get('found')}")
+        logger.info(f"  - match_count: {exact_results.get('match_count', 0)}")
+
     if exact_results and exact_results.get("found") and exact_results.get("match_count", 0) > 0:
-        logger.info(f"[Decision] Exact results found ({exact_results.get('match_count')} matches) → skip to synthesize")
+        logger.info(f"\nDecision: SKIP to synthesize (found {exact_results.get('match_count')} matches)")
+        logger.info(f"{'='*80}\n")
         return "synthesize"
     else:
-        logger.info("[Decision] No exact results → try vector search")
+        logger.info(f"\nDecision: Proceed to vector_search (no exact matches)")
+        logger.info(f"{'='*80}\n")
         return "vector_search"
 
 

@@ -51,11 +51,14 @@ def _create_llm(
             "api_key": api_key or settings.ANTHROPIC_API_KEY,
             "temperature": temperature,
             "max_tokens": max_tokens,
+            "timeout": 300,  # 5 minutes timeout for large context
         }
         if base_url or settings.ANTHROPIC_BASE_URL:
             llm_kwargs["base_url"] = base_url or settings.ANTHROPIC_BASE_URL
 
         logger.info(f"[_create_llm] Creating Claude LLM: {llm_kwargs['model']}")
+        logger.info(f"[_create_llm] API endpoint: {llm_kwargs.get('base_url', 'default (api.anthropic.com)')}")
+        logger.info(f"[_create_llm] Timeout: {llm_kwargs['timeout']}s, max_tokens: {llm_kwargs['max_tokens']}")
         return ChatAnthropic(**llm_kwargs)
 
     elif provider == "openai":
@@ -64,11 +67,14 @@ def _create_llm(
             "api_key": api_key or settings.OPENAI_API_KEY,
             "temperature": temperature,
             "max_tokens": max_tokens,
+            "timeout": 300,  # 5 minutes timeout for large context
         }
         if base_url or settings.OPENAI_BASE_URL:
             llm_kwargs["base_url"] = base_url or settings.OPENAI_BASE_URL
 
         logger.info(f"[_create_llm] Creating OpenAI LLM: {llm_kwargs['model']}")
+        logger.info(f"[_create_llm] API endpoint: {llm_kwargs.get('base_url', 'default (api.openai.com)')}")
+        logger.info(f"[_create_llm] Timeout: {llm_kwargs['timeout']}s, max_tokens: {llm_kwargs['max_tokens']}")
         return ChatOpenAI(**llm_kwargs)
 
     else:
@@ -134,6 +140,7 @@ def create_sni_graph(
     workflow.add_node("final_planning", nodes.final_search_planning_node)
     workflow.add_node("final_search", nodes.final_search_node)
     workflow.add_node("synthesize", nodes.synthesize_node)
+    workflow.add_node("tgt_standardization", nodes.tgt_standardization_node)
 
     workflow.set_entry_point("sni_exact_query")
 
@@ -155,7 +162,8 @@ def create_sni_graph(
     workflow.add_edge("round2_search", "final_planning")
     workflow.add_edge("final_planning", "final_search")
     workflow.add_edge("final_search", "synthesize")
-    workflow.add_edge("synthesize", END)
+    workflow.add_edge("synthesize", "tgt_standardization")
+    workflow.add_edge("tgt_standardization", END)
 
     compiled_graph = workflow.compile()
 

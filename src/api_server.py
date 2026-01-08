@@ -1,12 +1,25 @@
 """FastAPI server for SNI RAG system."""
 
 import uuid
+import json
+import logging
 from typing import Optional
 from contextlib import asynccontextmanager
+from datetime import datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
+from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
+
+# Configure logging to see all details
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    force=True  # Override any existing configuration
+)
+
+logger = logging.getLogger(__name__)
 
 from src.config import settings
 from src.agent import SNIAgent
@@ -131,6 +144,64 @@ async def query_sni(request: QueryRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/query/stream")
+async def query_sni_stream(
+    request: Request,
+    query: str = Query(..., description="Search query"),
+    session_id: Optional[str] = Query(None, description="Session ID"),
+    verbose: bool = Query(True, description="Enable verbose logging")
+):
+    """SSE streaming endpoint for real-time search progress.
+
+    Args:
+        request: FastAPI request object
+        query: Search query string
+        session_id: Optional session ID for tracking
+        verbose: Enable verbose logging
+
+    Returns:
+        EventSourceResponse with streaming search progress
+    """
+    if not sni_agent:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    async def event_generator():
+        try:
+            # Use the session_id from outer scope or generate a new one
+            current_session_id = session_id or str(uuid.uuid4())
+
+            # Send start event
+            yield {
+                "event": "search_started",
+                "data": json.dumps({
+                    "query": query,
+                    "session_id": current_session_id,
+                    "timestamp": datetime.now().isoformat()
+                })
+            }
+
+            # Stream query execution
+            async for event in sni_agent.aquery_stream(query=query, verbose=verbose):
+                yield {
+                    "event": event["type"],
+                    "data": json.dumps(event["data"])
+                }
+
+        except GeneratorExit:
+            logger.info("Client disconnected from SSE stream")
+        except Exception as e:
+            logger.error(f"SSE stream error: {e}", exc_info=True)
+            yield {
+                "event": "error",
+                "data": json.dumps({
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat()
+                })
+            }
+
+    return EventSourceResponse(event_generator())
 
 
 @app.post("/tools/exact")
