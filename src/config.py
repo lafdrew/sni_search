@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     # TGT Standard Library Configuration
     QDRANT_TGT_COLLECTION: str = "tgt_standard_library"
     TGT_LIBRARY_ENABLED: bool = True
-    TGT_VECTOR_THRESHOLD: float = 0.75
+    TGT_VECTOR_THRESHOLD: float = 0.6
     TGT_LLM_CONFIDENCE_THRESHOLD: float = 0.8
 
     # LLM Provider Configuration

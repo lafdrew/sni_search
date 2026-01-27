@@ -29,21 +29,27 @@ Determine if the newly discovered service entity "{{ new_tgt }}" belongs to any 
 
 Analyze whether the new entity is **THE SAME** as any candidate entity (not just similar or related).
 
+**CRITICAL PRINCIPLE**: If it's the same thing, DO NOT create a new entity. Merge them.
+
 Consider these questions:
 1. **Same Organization**: Do they belong to the same company/organization?
 2. **Same Product/Service**: Are they the exact same product or service?
-3. **Subdomain/API Endpoint**: Is the new entity just a technical subdomain or API endpoint of an existing service?
-4. **Different Business Unit**: Are they different products/brands from the same company? (Should NOT merge)
+3. **Cross-Language Identity**: Is one the Chinese/English name of the other? (e.g., "哔哩哔哩" = "Bilibili")
+4. **Description Check**: Does the description confirm they refer to the same service, even if wording differs?
+5. **Subdomain/API Endpoint**: Is the new entity just a technical subdomain or API endpoint of an existing service?
+6. **Different Business Unit**: Are they different products/brands from the same company? (Should NOT merge)
 
 # Matching Rules
 
 **SHOULD Match (Merge as Alias)**:
 - API subdomains of the same service (e.g., "api.aliyun.com" → "阿里云")
-- Different language names of same entity (e.g., "Aliyun" → "阿里云")
+- Cross-language names of same entity (e.g., "哔哩哔哩" = "Bilibili", "微信" = "WeChat", "字节跳动" = "ByteDance")
+- Same service with different description wording (e.g., "Bilibili" = "Bilibili – Chinese online video sharing and streaming platform")
 - Brand variations of same service (e.g., "阿里云计算" → "阿里云")
+- Abbreviations and full names of the same service
 
 **SHOULD NOT Match (Keep Separate)**:
-- Different products from same company (e.g., "钉钉" ≠ "阿里云")
+- Different products from same company (e.g., "钉钉" ≠ "阿里云", "抖音" ≠ "今日头条")
 - Different services with similar names (e.g., "Google Drive" ≠ "Google Search")
 - Generic service categories (e.g., "云存储" ≠ "阿里云")
 
@@ -73,6 +79,8 @@ Provide valid JSON without markdown code blocks:
 
 # Important Rules
 
+- **CRITICAL**: When in doubt, READ THE DESCRIPTIONS. If descriptions confirm they're the same service, MATCH them.
+- Cross-language equivalency is a strong signal for matching (中文/English = same entity)
 - Be conservative: Only mark as match if you're confident (>80%)
 - If uncertain, set match_found=false and let it be treated as a new entity
 - Output MUST be valid JSON without markdown code blocks

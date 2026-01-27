@@ -1014,8 +1014,18 @@ class SNIWorkflowNodes:
                 threshold=settings.TGT_VECTOR_THRESHOLD
             )
 
+            # Fallback: If vector search found nothing, try keyword fuzzy search
+            if not vector_results:
+                logger.info(f"[TGT] No vector matches, trying keyword fuzzy search")
+                vector_results = self.tgt_library.search_keyword_fuzzy(
+                    raw_tgt,
+                    limit=5
+                )
+                if vector_results:
+                    logger.info(f"[TGT] Found {len(vector_results)} candidates via keyword fuzzy search")
+
             if vector_results:
-                logger.info(f"[TGT] Found {len(vector_results)} similar entities via vector search")
+                logger.info(f"[TGT] Found {len(vector_results)} similar entities for LLM judgment")
 
                 # Step 3: LLM judgment
                 llm_decision = self._check_tgt_similarity(

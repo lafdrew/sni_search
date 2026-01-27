@@ -189,6 +189,8 @@ class TGTLibraryTools:
                     "standard_name": hit.payload.get("standard_name"),
                     "full_name": hit.payload.get("full_name"),
                     "aliases": hit.payload.get("aliases", []),
+                    "category": hit.payload.get("category"),
+                    "description": hit.payload.get("description"),
                     "score": round(hit.score, 3),
                 }
                 for hit in results.points
@@ -196,6 +198,68 @@ class TGTLibraryTools:
 
         except Exception as e:
             logger.error(f"Error in vector search: {e}")
+            return []
+
+    def search_keyword_fuzzy(self, tgt_name: str, limit: int = 10) -> List[Dict]:
+        """Fuzzy keyword search - extract core keyword and search all entities.
+
+        Args:
+            tgt_name: Entity name to search for
+            limit: Max results to return
+
+        Returns:
+            List of entities that contain the core keyword
+        """
+        try:
+            import re
+
+            # Extract core keywords (alphanumeric words longer than 3 chars)
+            keywords = re.findall(r'\b[a-zA-Z0-9]{4,}\b', tgt_name)
+
+            if not keywords:
+                # For Chinese or short names, use the full name
+                keywords = [tgt_name]
+
+            logger.info(f"[TGT] Extracted keywords for fuzzy search: {keywords}")
+
+            # Get all entities and filter locally
+            all_results = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=limit * 10,  # Get more to filter
+                with_payload=True,
+            )
+
+            matches = []
+            for point in all_results[0]:
+                payload = point.payload
+                standard_name = payload.get("standard_name", "")
+                aliases = payload.get("aliases", [])
+                description = payload.get("description", "")
+
+                # Check if any keyword matches
+                text_to_search = f"{standard_name} {' '.join(aliases)} {description}".lower()
+
+                for keyword in keywords:
+                    if keyword.lower() in text_to_search:
+                        matches.append({
+                            "id": point.id,
+                            "standard_name": standard_name,
+                            "full_name": payload.get("full_name"),
+                            "aliases": aliases,
+                            "category": payload.get("category"),
+                            "description": description,
+                            "score": 0.5,  # Default score for fuzzy match
+                            "match_type": "keyword"
+                        })
+                        break
+
+                if len(matches) >= limit:
+                    break
+
+            return matches
+
+        except Exception as e:
+            logger.error(f"Error in fuzzy keyword search: {e}")
             return []
 
     def add_alias(self, standard_name: str, new_alias: str) -> bool:
@@ -264,6 +328,8 @@ class TGTLibraryTools:
                 - standard_name: Required
                 - full_name: Optional
                 - aliases: Optional list
+                - category: Optional
+                - description: Optional
                 - verification_status: Optional
 
         Returns:
@@ -274,11 +340,16 @@ class TGTLibraryTools:
             if not standard_name:
                 raise ValueError("standard_name is required")
 
-            # Generate vector from standard name and aliases
+            # Generate vector from standard name, aliases, and description
             text_to_embed = standard_name
             aliases = tgt_data.get("aliases", [])
             if aliases:
                 text_to_embed += " " + " ".join(aliases[:3])
+
+            # Include description in embedding for better similarity matching
+            description = tgt_data.get("description", "")
+            if description:
+                text_to_embed += " " + description
 
             vector = self.model.encode(text_to_embed).tolist()
 
@@ -288,6 +359,8 @@ class TGTLibraryTools:
                 "standard_name": standard_name,
                 "full_name": tgt_data.get("full_name", standard_name),
                 "aliases": aliases,
+                "category": tgt_data.get("category"),
+                "description": description,
                 "verification_status": tgt_data.get("verification_status", "auto_generated"),
                 "created_at": now,
                 "updated_at": now,
