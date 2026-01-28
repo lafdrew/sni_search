@@ -31,7 +31,8 @@ Provide a JSON response with exactly these three fields:
 
 ```json
 {
-  "tgt": "The name of the website or service",
+  "tgt": "Service Name (服务名)",
+  "service_type": "category/subcategory",
   "Explanation": "A brief 1-2 sentence explanation of what this service does",
   "Query Results": "Summary of findings from all sources"
 }

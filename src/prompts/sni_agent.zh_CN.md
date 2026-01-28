@@ -31,7 +31,8 @@ CURRENT_TIME: {{ CURRENT_TIME }}
 
 ```json
 {
-  "tgt": "网站或服务的名称",
+  "tgt": "Service Name (服务名)",
+  "service_type": "category/subcategory",
   "Explanation": "关于此服务功能的简短 1-2 句解释",
   "Query Results": "所有来源的发现摘要"
 }

@@ -1,256 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================
-   APPLE DESIGN SYSTEM - Design Tokens
-   ============================================ */
+@layer base {
+  :root {
+    /* Light mode - Emerald/Teal theme */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-@theme {
-  /* Color Palette - Apple Style */
-  --color-primary: #007AFF;
-  --color-primary-hover: #0051D5;
-  --color-primary-light: #E5F1FF;
+    /* Emerald as primary (Kimi style) */
+    --primary: 160 84% 39%;  /* Emerald-600 */
+    --primary-foreground: 0 0% 100%;
 
-  --color-bg-primary: #FFFFFF;
-  --color-bg-secondary: #F5F5F7;
-  --color-bg-tertiary: #ECECEF;
+    --secondary: 220 13% 91%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-  --color-text-primary: #1D1D1F;
-  --color-text-secondary: #86868B;
-  --color-text-tertiary: #D2D2D7;
+    --muted: 220 13% 91%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-  --color-border: #E5E5EA;
-  --color-divider: rgba(0, 0, 0, 0.08);
+    --accent: 220 13% 91%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-  --color-success: #34C759;
-  --color-warning: #FF9500;
-  --color-error: #FF3B30;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-  /* Shadows - Soft and Subtle */
-  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.12);
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 160 84% 39%;  /* Emerald ring */
 
-  /* Border Radius - Apple Style */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
-  --radius-full: 9999px;
+    --radius: 0.625rem;
+  }
 
-  /* Typography */
-  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  .dark {
+    /* Dark mode */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-  /* Animation Timing Functions */
-  --ease-apple: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Emerald lighter in dark mode */
+    --primary: 160 84% 55%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 160 84% 55%;
+  }
 }
-
-/* ============================================
-   BASE STYLES
-   ============================================ */
 
 @layer base {
   * {
-    box-sizing: border-box;
+    @apply border-border;
   }
-
   body {
-    margin: 0;
-    font-family: var(--font-body);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    background-color: var(--color-bg-secondary);
-    color: var(--color-text-primary);
-  }
-
-  #root {
-    min-height: 100vh;
-  }
-
-  /* Typography Scale */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--color-text-primary);
-  }
-
-  h1 { font-size: 2rem; line-height: 1.2; }
-  h2 { font-size: 1.5rem; line-height: 1.3; }
-  h3 { font-size: 1.25rem; line-height: 1.4; }
-  h4 { font-size: 1.125rem; line-height: 1.5; }
-
-  p {
-    line-height: 1.6;
+    @apply bg-background text-foreground;
   }
 }
 
-/* ============================================
-   CUSTOM ANIMATIONS
-   ============================================ */
-
-@layer utilities {
-  /* Smooth Fade In */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Smooth Scale In */
-  @keyframes scaleIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  /* Gentle Pulse */
-  @keyframes gentlePulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.6;
-    }
-  }
-
-  /* Smooth Spin */
-  @keyframes smoothSpin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* Progress Bar Fill */
-  @keyframes progressFill {
-    from {
-      width: 0%;
-    }
-  }
-
-  /* Shimmer Effect */
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(100%);
-    }
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.6s var(--ease-apple) forwards;
-  }
-
-  .animate-scale-in {
-    animation: scaleIn 0.4s var(--ease-spring) forwards;
-  }
-
-  .animate-gentle-pulse {
-    animation: gentlePulse 2s ease-in-out infinite;
-  }
-
-  .animate-smooth-spin {
-    animation: smoothSpin 1s linear infinite;
-  }
-
-  .animate-shimmer {
-    animation: shimmer 2s infinite;
-  }
-
-  /* Staggered Animation Delays */
-  .delay-100 { animation-delay: 0.1s; }
-  .delay-200 { animation-delay: 0.2s; }
-  .delay-300 { animation-delay: 0.3s; }
-  .delay-400 { animation-delay: 0.4s; }
-  .delay-500 { animation-delay: 0.5s; }
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* ============================================
-   COMPONENT STYLES
-   ============================================ */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-@layer components {
-  /* Card Base Style */
-  .card {
-    background: var(--color-bg-primary);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--color-border);
-    transition: all 0.3s var(--ease-apple);
-  }
+::-webkit-scrollbar-thumb {
+  @apply bg-muted;
+  border-radius: 3px;
+}
 
-  .card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-  }
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground;
+}
 
-  /* Button Base Style */
-  .btn-primary {
-    background: var(--color-primary);
-    color: white;
-    border-radius: var(--radius-full);
-    padding: 0.75rem 1.5rem;
-    font-weight: 500;
-    font-size: 0.9375rem;
-    transition: all 0.2s var(--ease-apple);
-    box-shadow: var(--shadow-sm);
-  }
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
 
-  .btn-primary:hover {
-    background: var(--color-primary-hover);
-    box-shadow: var(--shadow-md);
-    transform: scale(1.02);
-  }
+/* Focus visible */
+*:focus-visible {
+  @apply outline-none ring-2 ring-ring ring-offset-2;
+}
 
-  .btn-primary:active {
-    transform: scale(0.98);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  /* Input Base Style */
-  .input {
-    background: var(--color-bg-primary);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-xl);
-    padding: 0.875rem 1.25rem;
-    font-size: 1rem;
-    transition: all 0.2s var(--ease-apple);
-  }
-
-  .input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px var(--color-primary-light);
-  }
-
-  .input::placeholder {
-    color: var(--color-text-secondary);
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

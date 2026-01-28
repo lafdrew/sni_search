@@ -19,7 +19,7 @@ async def test_multi_round_search():
     logger.info("Testing Multi-Round Iterative Search Workflow")
     logger.info("=" * 80)
 
-    test_query = "www.bilibili.com"
+    test_query = "lafdrew.com"
 
     logger.info(f"\nTest Query: {test_query}\n")
 

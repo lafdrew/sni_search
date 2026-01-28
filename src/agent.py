@@ -148,7 +148,7 @@ class SNIAgent:
 
             return {
                 "query": query,
-                "answer": f'{{"tgt": "Error", "Explanation": "An error occurred", "Query Results": "{str(e)}"}}',
+                "answer": f'{{"tgt": "Error", "service_type": "other/service", "Explanation": "An error occurred", "Query Results": "{str(e)}"}}',
                 "metadata": {"error": str(e)}
             }
 
@@ -229,7 +229,7 @@ class SNIAgent:
 
             return {
                 "query": query,
-                "answer": f'{{"tgt": "Error", "Explanation": "An error occurred", "Query Results": "{str(e)}"}}',
+                "answer": f'{{"tgt": "Error", "service_type": "other/service", "Explanation": "An error occurred", "Query Results": "{str(e)}"}}',
                 "metadata": {"error": str(e)}
             }
 

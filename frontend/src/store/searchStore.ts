@@ -1,119 +1,80 @@
-import { create } from 'zustand';
-import type { SearchState, SearchStage } from '../types/search';
+import { create } from 'zustand'
+import type { SearchResult } from '@/types/search'
 
-const STAGE_ORDER: SearchStage[] = [
-  'sni_exact_query',
-  'vector_search',
-  'initial_web_search',
-  'keyword_extraction',
-  'round1_planning',
-  'round1_search',
-  'round2_planning',
-  'round2_search',
-  'final_planning',
-  'final_search',
-  'synthesize',
-  'tgt_standardization'
-];
-
-interface SearchActions {
-  startSearch: (query: string) => void;
-  updateStage: (stage: SearchStage, data: Record<string, any>) => void;
-  completeStage: (stage: SearchStage) => void;
-  setFinalAnswer: (answer: string) => void;
-  setError: (error: string) => void;
-  reset: () => void;
+interface SearchStore {
+  // State
+  query: string
+  isSearching: boolean
+  results: SearchResult[]
+  totalCount: number
+  proMode: boolean
+  
+  // Actions
+  setQuery: (query: string) => void
+  setProMode: (enabled: boolean) => void
+  search: () => Promise<void>
+  clearResults: () => void
 }
 
-export const useSearchStore = create<SearchState & SearchActions>((set) => ({
+// Mock search results for demonstration
+const mockResults: SearchResult[] = [
+  {
+    id: '1',
+    source: 'Qdrant Vector DB',
+    sourceIcon: 'database',
+    title: 'SNI Exact Match: example.com',
+    description: 'Found exact match in vector database with 100% confidence...',
+    url: '#'
+  },
+  {
+    id: '2',
+    source: 'Web Search',
+    sourceIcon: 'search',
+    title: 'example.com - Domain Information',
+    description: 'Example domain for illustrative examples in documents...',
+    url: 'https://example.com'
+  },
+  {
+    id: '3',
+    source: 'TGT Library',
+    sourceIcon: 'library',
+    title: 'Standardized Entity: Example Organization',
+    description: 'Canonical name mapping and entity standardization data...',
+    url: '#'
+  }
+]
+
+export const useSearchStore = create<SearchStore>((set, get) => ({
   query: '',
-  sessionId: '',
-  status: 'idle',
-  currentStage: null,
-  stages: STAGE_ORDER.map(stage => ({
-    stage,
-    status: 'pending' as const,
-    data: {},
-    timestamp: 0
-  })),
-  finalAnswer: null,
-  error: null,
-  startTime: null,
-  endTime: null,
+  isSearching: false,
+  results: [],
+  totalCount: 0,
+  proMode: false,
 
-  startSearch: (query) => set({
-    query,
-    sessionId: crypto.randomUUID(),
-    status: 'searching',
-    currentStage: STAGE_ORDER[0],
-    stages: STAGE_ORDER.map(stage => ({
-      stage,
-      status: 'pending' as const,
-      data: {},
-      timestamp: 0
-    })),
-    finalAnswer: null,
-    error: null,
-    startTime: Date.now(),
-    endTime: null
-  }),
+  setQuery: (query: string) => set({ query }),
 
-  updateStage: (stage, data) => set(state => {
-    const stages = state.stages.map(s =>
-      s.stage === stage
-        ? { ...s, status: 'in_progress' as const, data, timestamp: Date.now() }
-        : s
-    );
-    return { stages, currentStage: stage };
-  }),
+  setProMode: (enabled: boolean) => set({ proMode: enabled }),
 
-  completeStage: (stage) => set(state => {
-    const stages = state.stages.map(s => {
-      if (s.stage === stage) {
-        const duration = Date.now() - s.timestamp;
-        return { ...s, status: 'completed' as const, duration };
-      }
-      return s;
-    });
+  search: async () => {
+    const { query } = get()
+    if (!query.trim()) return
 
-    const currentIndex = STAGE_ORDER.indexOf(stage);
-    const nextStage = currentIndex < STAGE_ORDER.length - 1
-      ? STAGE_ORDER[currentIndex + 1]
-      : null;
+    set({ isSearching: true })
 
-    return {
-      stages,
-      currentStage: nextStage,
-      status: nextStage ? 'searching' : 'completed'
-    };
-  }),
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800))
 
-  setFinalAnswer: (answer) => set({
-    finalAnswer: answer,
-    status: 'completed',
-    endTime: Date.now()
-  }),
+    // Use mock data
+    set({
+      results: mockResults,
+      totalCount: mockResults.length,
+      isSearching: false
+    })
+  },
 
-  setError: (error) => set({
-    error,
-    status: 'error',
-    endTime: Date.now()
-  }),
-
-  reset: () => set({
-    query: '',
-    sessionId: '',
-    status: 'idle',
-    currentStage: null,
-    stages: STAGE_ORDER.map(stage => ({
-      stage,
-      status: 'pending' as const,
-      data: {},
-      timestamp: 0
-    })),
-    finalAnswer: null,
-    error: null,
-    startTime: null,
-    endTime: null
+  clearResults: () => set({
+    results: [],
+    totalCount: 0,
+    query: ''
   })
-}));
+}))

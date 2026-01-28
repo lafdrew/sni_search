@@ -437,7 +437,7 @@ class SNIWorkflowNodes:
 
             if answer is None:
                 logger.error("[synthesize_node] LLM returned None content")
-                error_answer = '{"tgt": "Error", "Explanation": "LLM returned None", "Query Results": "No content"}'
+                error_answer = '{"tgt": "Error", "service_type": "other/service", "Explanation": "LLM returned None", "Query Results": "No content"}'
                 return {"final_answer": error_answer}
 
             logger.info(f"[synthesize_node] Generated comprehensive answer ({len(answer)} chars) from {len(context_parts)} sources")
@@ -452,7 +452,7 @@ class SNIWorkflowNodes:
             import traceback
             logger.error(f"[synthesize_node] Error: {e}")
             logger.error(f"[synthesize_node] Traceback:\n{traceback.format_exc()}")
-            error_answer = '{"tgt": "Error", "Explanation": "An error occurred during synthesis", "Query Results": "' + str(e) + '"}'
+            error_answer = '{"tgt": "Error", "service_type": "other/service", "Explanation": "An error occurred during synthesis", "Query Results": "' + str(e) + '"}'
             return {"final_answer": error_answer}
 
     async def initial_web_search_node(self, state: SNIAgentState) -> Dict[str, Any]:
