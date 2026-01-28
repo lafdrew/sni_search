@@ -10,9 +10,13 @@ MiroThinker
 # Vector Database Data
 qdrant_data/
 
-# Environment Variables (keep .env.example)
+# Environment Variables (明文文件不提交)
 .env
 .env.local
+.env.*.local
+
+# 加密的环境变量文件可以提交（可选）
+# .env.7z
 
 # Python
 __pycache__/

@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Qdrant 向量数据库
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: sni-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    networks:
+      - sni-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 后端服务（从 Docker Hub 拉取）
+  backend:
+    image: yourname/sni-backend:latest
+    container_name: sni-backend
+    ports:
+      - "9000:9000"
+    environment:
+      # Qdrant 配置
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-sni_domain_mapping}
+      - QDRANT_TGT_COLLECTION=${QDRANT_TGT_COLLECTION:-tgt_standard_library}
+
+      # LLM 配置（运行时手动输入）
+      - LLM_PROVIDER=${LLM_PROVIDER:-claude}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:?请设置 ANTHROPIC_API_KEY 环境变量}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-5-20250929}
+
+      # 嵌入模型
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+
+      # 搜索引擎
+      - SEARCH_API=${SEARCH_API:-duckduckgo}
+      - MAX_SEARCH_RESULTS=${MAX_SEARCH_RESULTS:-5}
+
+      # 爬虫
+      - CRAWLER_ENGINE=${CRAWLER_ENGINE:-jina}
+      - CRAWLER_TIMEOUT=${CRAWLER_TIMEOUT:-30}
+
+      # API 配置
+      - API_HOST=0.0.0.0
+      - API_PORT=9000
+      - DATA_DIR=/app/results
+
+      # TGT 标准库
+      - TGT_LIBRARY_ENABLED=${TGT_LIBRARY_ENABLED:-true}
+      - TGT_VECTOR_THRESHOLD=${TGT_VECTOR_THRESHOLD:-0.75}
+
+      # 可选 API Keys（运行时可选输入）
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - JINA_API_KEY=${JINA_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - ./results:/app/results
+      - ./models:/app/models:ro
+      - ./data:/app/data:ro
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - sni-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # 前端服务（从 Docker Hub 拉取）
+  frontend:
+    image: yourname/sni-frontend:latest
+    container_name: sni-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - sni-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  sni-network:
+    driver: bridge
+
+volumes:
+  qdrant_storage:
+    driver: local
