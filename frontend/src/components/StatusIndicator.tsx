@@ -7,40 +7,42 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+type Status = 'idle' | 'thinking' | 'completed' | 'error';
+
 interface StatusIndicatorProps {
-  status: 'idle' | 'thinking' | 'completed' | 'error';
+  status: Status;
   label?: string;
   size?: 'sm' | 'md' | 'lg';
   showPulse?: boolean;
   className?: string;
 }
 
+const SIZE_CLASSES = {
+  sm: 'w-2 h-2',
+  md: 'w-3 h-3',
+  lg: 'w-4 h-4'
+} as const;
+
+const STATUS_COLORS = {
+  idle: 'bg-gray-400',
+  thinking: 'bg-blue-500',
+  completed: 'bg-emerald-500',
+  error: 'bg-red-500'
+} as const;
+
 export function StatusIndicator({
   status,
   label,
   size = 'md',
   showPulse = true,
-  className = ''
+  className
 }: StatusIndicatorProps) {
-  const sizes = {
-    sm: 'w-2 h-2',
-    md: 'w-3 h-3',
-    lg: 'w-4 h-4'
-  };
-
-  const colors = {
-    idle: 'bg-gray-400',
-    thinking: 'bg-blue-500',
-    completed: 'bg-emerald-500',
-    error: 'bg-red-500'
-  };
-
   const shouldPulse = showPulse && status === 'thinking';
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <div className="relative">
-        <div className={cn('rounded-full', sizes[size], colors[status])} />
+        <div className={cn('rounded-full', SIZE_CLASSES[size], STATUS_COLORS[status])} />
         {shouldPulse && (
           <motion.div
             animate={{
@@ -52,10 +54,7 @@ export function StatusIndicator({
               repeat: Infinity,
               ease: "easeInOut"
             }}
-            className={cn(
-              'absolute inset-0 rounded-full',
-              colors[status]
-            )}
+            className={cn('absolute inset-0 rounded-full', STATUS_COLORS[status])}
           />
         )}
       </div>

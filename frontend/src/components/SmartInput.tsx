@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Paperclip, Send } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
@@ -11,14 +11,13 @@ interface SmartInputProps {
 export function SmartInput({ placeholder = '输入 SNI 域名进行查询...' }: SmartInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [isFocused, setIsFocused] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  
-  const { 
-    setQuery, 
-    search, 
-    isSearching, 
-    proMode, 
-    setProMode 
+
+  const {
+    setQuery,
+    search,
+    isSearching,
+    proMode,
+    setProMode
   } = useSearchStore()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -61,7 +60,6 @@ export function SmartInput({ placeholder = '输入 SNI 域名进行查询...' }:
       }}
     >
       <textarea
-        ref={textareaRef}
         value={inputValue}
         onChange={handleInputChange}
         onFocus={() => setIsFocused(true)}

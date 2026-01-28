@@ -4,7 +4,7 @@
  * Enhanced with shadcn/ui components and Emerald theme
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +30,15 @@ export function ChatContainer() {
 
   const aiDisclaimerText = t('aiDisclaimer', locale);
 
+  const handleSubmit = useCallback((query: string) => {
+    // Build SSE URL - use /query/stream endpoint (not /query)
+    const url = new URL('/query/stream', API_BASE_URL);
+    url.searchParams.set('query', query);
+    url.searchParams.set('verbose', 'true');
+
+    setSSEUrl(url.toString());
+  }, []);
+
   // Handle query from URL parameter
   useEffect(() => {
     const query = searchParams.get('q');
@@ -37,16 +46,7 @@ export function ChatContainer() {
       // Auto-submit query from URL
       handleSubmit(query);
     }
-  }, [searchParams]);
-
-  const handleSubmit = (query: string) => {
-    // Build SSE URL - use /query/stream endpoint (not /query)
-    const url = new URL('/query/stream', API_BASE_URL);
-    url.searchParams.set('query', query);
-    url.searchParams.set('verbose', 'true');
-
-    setSSEUrl(url.toString());
-  };
+  }, [searchParams, handleSubmit]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">

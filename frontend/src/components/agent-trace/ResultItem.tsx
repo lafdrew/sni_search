@@ -17,71 +17,43 @@ interface ResultItemProps {
   type?: ResultType;
 }
 
+interface IconConfig {
+  Icon: typeof Globe;
+  colorClass: string;
+}
+
+const RESULT_TYPE_CONFIG: Record<ResultType, IconConfig> = {
+  news: { Icon: Newspaper, colorClass: 'text-red-600 dark:text-red-400' },
+  academic: { Icon: GraduationCap, colorClass: 'text-blue-600 dark:text-blue-400' },
+  commerce: { Icon: ShoppingBag, colorClass: 'text-orange-600 dark:text-orange-400' },
+  official: { Icon: FileText, colorClass: 'text-green-600 dark:text-green-400' },
+  web: { Icon: Globe, colorClass: 'text-primary' }
+};
+
 /**
- * Get icon and color based on result type
+ * Get icon and color based on result type or domain heuristics
  */
-function getIconConfig(type: ResultType = 'web', domain: string) {
-  // Heuristic type detection if type not provided
-  if (!type || type === 'web') {
-    // Academic domains
-    if (domain.includes('.edu') || domain.includes('scholar') || domain.includes('arxiv')) {
-      return {
-        Icon: GraduationCap,
-        colorClass: 'text-blue-600 dark:text-blue-400'
-      };
-    }
-    // News domains
-    if (domain.includes('news') || domain.includes('times') || domain.includes('post')) {
-      return {
-        Icon: Newspaper,
-        colorClass: 'text-red-600 dark:text-red-400'
-      };
-    }
-    // Commerce domains
-    if (domain.includes('shop') || domain.includes('store') || domain.includes('buy')) {
-      return {
-        Icon: ShoppingBag,
-        colorClass: 'text-orange-600 dark:text-orange-400'
-      };
-    }
-    // Government/official domains
-    if (domain.includes('.gov') || domain.includes('official')) {
-      return {
-        Icon: FileText,
-        colorClass: 'text-green-600 dark:text-green-400'
-      };
-    }
+function getIconConfig(type: ResultType | undefined, domain: string): IconConfig {
+  // If explicit type is provided and not 'web', use it directly
+  if (type && type !== 'web') {
+    return RESULT_TYPE_CONFIG[type];
   }
 
-  // Type-based configuration
-  switch (type) {
-    case 'news':
-      return {
-        Icon: Newspaper,
-        colorClass: 'text-red-600 dark:text-red-400'
-      };
-    case 'academic':
-      return {
-        Icon: GraduationCap,
-        colorClass: 'text-blue-600 dark:text-blue-400'
-      };
-    case 'commerce':
-      return {
-        Icon: ShoppingBag,
-        colorClass: 'text-orange-600 dark:text-orange-400'
-      };
-    case 'official':
-      return {
-        Icon: FileText,
-        colorClass: 'text-green-600 dark:text-green-400'
-      };
-    case 'web':
-    default:
-      return {
-        Icon: Globe,
-        colorClass: 'text-primary'
-      };
+  // Apply domain-based heuristics
+  if (domain.includes('.edu') || domain.includes('scholar') || domain.includes('arxiv')) {
+    return RESULT_TYPE_CONFIG.academic;
   }
+  if (domain.includes('news') || domain.includes('times') || domain.includes('post')) {
+    return RESULT_TYPE_CONFIG.news;
+  }
+  if (domain.includes('shop') || domain.includes('store') || domain.includes('buy')) {
+    return RESULT_TYPE_CONFIG.commerce;
+  }
+  if (domain.includes('.gov') || domain.includes('official')) {
+    return RESULT_TYPE_CONFIG.official;
+  }
+
+  return RESULT_TYPE_CONFIG.web;
 }
 
 export const ResultItem = memo(function ResultItem({ title, url, snippet, type }: ResultItemProps) {

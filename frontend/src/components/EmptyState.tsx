@@ -6,6 +6,7 @@
 
 import { motion } from 'framer-motion';
 import { Search, MessageSquare, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
   icon?: 'search' | 'message' | 'sparkles';
@@ -14,26 +15,26 @@ interface EmptyStateProps {
   className?: string;
 }
 
+const ICON_MAP = {
+  search: Search,
+  message: MessageSquare,
+  sparkles: Sparkles
+} as const;
+
 export function EmptyState({
   icon = 'search',
   title = 'Enter a query to start...',
   description,
-  className = ''
+  className
 }: EmptyStateProps) {
-  const icons = {
-    search: Search,
-    message: MessageSquare,
-    sparkles: Sparkles
-  };
-
-  const Icon = icons[icon];
+  const Icon = ICON_MAP[icon];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className={`flex flex-col items-center justify-center py-16 ${className}`}
+      className={cn('flex flex-col items-center justify-center py-16', className)}
     >
       <motion.div
         initial={{ scale: 0.8 }}

@@ -9,7 +9,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useAgentTraceStore } from '../../store/agentTraceStore';
+import { useAgentTraceStore, type AgentStatus } from '../../store/agentTraceStore';
+
+interface StatusConfig {
+  icon: typeof Activity;
+  label: string;
+  variant: 'default' | 'secondary' | 'destructive' | 'outline';
+}
+
+const STATUS_CONFIG: Record<AgentStatus, StatusConfig> = {
+  idle: { icon: Activity, label: 'Ready', variant: 'secondary' },
+  thinking: { icon: Loader2, label: 'Processing', variant: 'default' },
+  completed: { icon: CheckCircle2, label: 'Complete', variant: 'default' },
+  error: { icon: AlertCircle, label: 'Error', variant: 'destructive' }
+};
 
 export function Header() {
   const { status, currentAction, reset } = useAgentTraceStore();
@@ -56,15 +69,8 @@ export function Header() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const variants: Record<string, { icon: React.ElementType; label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-    idle: { icon: Activity, label: "Ready", variant: "secondary" },
-    thinking: { icon: Loader2, label: "Processing", variant: "default" },
-    completed: { icon: CheckCircle2, label: "Complete", variant: "default" },
-    error: { icon: AlertCircle, label: "Error", variant: "destructive" },
-  };
-
-  const config = variants[status] || variants.idle;
+function StatusBadge({ status }: { status: AgentStatus }) {
+  const config = STATUS_CONFIG[status];
   const Icon = config.icon;
 
   return (

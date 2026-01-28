@@ -333,65 +333,56 @@ export function transformNodeToUIEvents(
  * Extract URLs from search result data
  * Handles various result formats from different search engines
  */
-function extractUrlsFromSearchResult(result: any): Array<{ title: string; url: string; snippet?: string }> {
-  const urls: Array<{ title: string; url: string; snippet?: string }> = [];
-
-  if (!result) return urls;
+function extractUrlsFromSearchResult(result: unknown): Array<{ title: string; url: string; snippet?: string }> {
+  if (!result) return [];
 
   // Handle string result (might contain URLs)
   if (typeof result === 'string') {
-    // Try to extract URLs from text using regex
     const urlRegex = /https?:\/\/[^\s]+/g;
     const matches = result.match(urlRegex);
-    if (matches) {
-      matches.slice(0, 5).forEach(url => {
-        urls.push({ title: url, url });
-      });
-    }
-    return urls;
+    if (!matches) return [];
+    return matches.slice(0, 5).map(url => ({ title: url, url }));
   }
 
-  // Handle array of results
+  // Helper to extract URL item from various formats
+  const extractItem = (item: Record<string, unknown>): { title: string; url: string; snippet?: string } | null => {
+    const url = (item.url || item.link) as string | undefined;
+    if (!url) return null;
+    return {
+      title: (item.title as string) || url,
+      url,
+      snippet: (item.snippet || item.description) as string | undefined
+    };
+  };
+
+  // Determine the array to process
+  const resultObj = result as Record<string, unknown>;
+  let items: unknown[] | undefined;
+
   if (Array.isArray(result)) {
-    result.slice(0, 5).forEach(item => {
-      if (item.url || item.link) {
-        urls.push({
-          title: item.title || item.url || item.link,
-          url: item.url || item.link,
-          snippet: item.snippet || item.description
-        });
-      }
-    });
-    return urls;
+    items = result;
+  } else if (Array.isArray(resultObj.results)) {
+    items = resultObj.results;
+  } else if (Array.isArray(resultObj.urls)) {
+    // Handle urls array (can be strings or objects)
+    return (resultObj.urls as Array<string | { url: string; title?: string }>)
+      .slice(0, 5)
+      .map(urlItem => {
+        if (typeof urlItem === 'string') {
+          return { title: urlItem, url: urlItem };
+        }
+        if (urlItem.url) {
+          return { title: urlItem.title || urlItem.url, url: urlItem.url };
+        }
+        return null;
+      })
+      .filter((item): item is { title: string; url: string } => item !== null);
   }
 
-  // Handle object with results array
-  if (result.results && Array.isArray(result.results)) {
-    result.results.slice(0, 5).forEach((item: any) => {
-      if (item.url || item.link) {
-        urls.push({
-          title: item.title || item.url || item.link,
-          url: item.url || item.link,
-          snippet: item.snippet || item.description
-        });
-      }
-    });
-    return urls;
-  }
+  if (!items) return [];
 
-  // Handle object with urls array
-  if (result.urls && Array.isArray(result.urls)) {
-    result.urls.slice(0, 5).forEach((url: string | { url: string; title?: string }) => {
-      if (typeof url === 'string') {
-        urls.push({ title: url, url });
-      } else if (url.url) {
-        urls.push({
-          title: url.title || url.url,
-          url: url.url
-        });
-      }
-    });
-  }
-
-  return urls;
+  return items
+    .slice(0, 5)
+    .map(item => extractItem(item as Record<string, unknown>))
+    .filter((item): item is { title: string; url: string; snippet?: string } => item !== null);
 }

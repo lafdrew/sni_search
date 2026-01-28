@@ -38,7 +38,7 @@ interface AgentTraceState {
 
 // Generate unique ID for events
 function generateEventId(): string {
-  return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `evt_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 export const useAgentTraceStore = create<AgentTraceState>((set) => ({

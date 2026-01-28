@@ -52,7 +52,7 @@ export function useSSE(url: string | null) {
       startQuery(data.query, data.session_id);
     });
 
-    // Node event mapping
+    // Node event types - the 'node_' prefix is stripped to get the node name
     const nodeEventTypes = [
       'node_sni_exact_query',
       'node_vector_search',
@@ -68,26 +68,11 @@ export function useSSE(url: string | null) {
       'node_tgt_standardization'
     ];
 
-    const nodeNameMapping: Record<string, string> = {
-      'node_sni_exact_query': 'sni_exact_query',
-      'node_vector_search': 'vector_search',
-      'node_initial_web_search': 'initial_web_search',
-      'node_keyword_extraction': 'keyword_extraction',
-      'node_round1_planning': 'round1_planning',
-      'node_round1_search': 'round1_search',
-      'node_round2_planning': 'round2_planning',
-      'node_round2_search': 'round2_search',
-      'node_final_planning': 'final_planning',
-      'node_final_search': 'final_search',
-      'node_synthesize': 'synthesize',
-      'node_tgt_standardization': 'tgt_standardization'
-    };
-
     // Register listeners for each node event type
     nodeEventTypes.forEach((eventType) => {
       eventSource.addEventListener(eventType, (e) => {
         const data = JSON.parse((e as MessageEvent).data);
-        const nodeName = nodeNameMapping[eventType];
+        const nodeName = eventType.replace('node_', '');
 
         console.log(`[SSE] ${eventType}:`, data);
 
