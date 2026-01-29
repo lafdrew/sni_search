@@ -4,13 +4,13 @@ FROM node:20-alpine AS builder
 WORKDIR /build
 
 # 复制依赖清单
-COPY package*.json ./
+COPY frontend/package*.json ./
 
-# 安装依赖
-RUN npm ci --only=production
+# 安装依赖（包含 devDependencies 用于构建）
+RUN npm ci
 
 # 复制源代码
-COPY . .
+COPY frontend/ .
 
 # 构建参数：后端 API 地址
 ARG VITE_API_BASE_URL=http://localhost:9000

@@ -20,7 +20,7 @@ services:
 
   # 后端服务（从 Docker Hub 拉取）
   backend:
-    image: yourname/sni-backend:latest
+    image: lafdrew/sni-backend:latest
     container_name: sni-backend
     ports:
       - "9000:9000"
@@ -79,7 +79,7 @@ services:
 
   # 前端服务（从 Docker Hub 拉取）
   frontend:
-    image: yourname/sni-frontend:latest
+    image: lafdrew/sni-frontend:latest
     container_name: sni-frontend
     ports:
       - "80:80"

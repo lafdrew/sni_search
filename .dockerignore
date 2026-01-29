@@ -35,9 +35,10 @@ htmlcov/
 
 # Documentation
 docs/
-*.md
-!README.md
 LICENSE
+# 排除其他文档，但保留 README.md（项目构建需要）
+CLAUDE.md
+*.zh.md
 
 # Frontend (will be built separately)
 frontend/node_modules/

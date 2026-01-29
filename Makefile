@@ -26,7 +26,7 @@ build-backend: ## 快速构建后端镜像
 
 .PHONY: build-frontend
 build-frontend: ## 构建前端镜像
-	cd frontend && docker build -f ../docker/frontend.Dockerfile \
+	docker build -f docker/frontend.Dockerfile \
 		--build-arg VITE_API_BASE_URL=http://localhost:9000 \
 		-t $(FRONTEND_IMAGE):$(VERSION) \
 		-t $(FRONTEND_IMAGE):latest .
