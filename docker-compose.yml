@@ -12,12 +12,6 @@ services:
     networks:
       - sni-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/readyz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   # 后端服务（从 Docker Hub 拉取）
   backend:
@@ -66,8 +60,7 @@ services:
       - ./models:/app/models:ro
       - ./data:/app/data:ro
     depends_on:
-      qdrant:
-        condition: service_healthy
+      - qdrant
     networks:
       - sni-network
     restart: unless-stopped
@@ -83,7 +76,7 @@ services:
     image: lafdrew/sni-frontend:latest
     container_name: sni-frontend
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - backend
     networks:
