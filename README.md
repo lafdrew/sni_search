@@ -14,6 +14,9 @@ cd sni_search
 # 2. 配置环境变量
 使用7z 解压.env.7z文件 确保.env文件在项目根目录中(.env中有配置好的llm api和websearch api)
 
+
+
+
 # 3. 启动服务
 docker compose up -d
 ```
@@ -99,7 +102,7 @@ uv sync
 
 ```bash
 # 下载模型到本地 data/models/embeddings 目录
- uv run python scripts/download_embedding_model.py --model                               sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+ uv run python scripts/download_embedding_model.py --model     sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
 
 ```

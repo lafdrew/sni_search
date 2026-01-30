@@ -64,7 +64,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     volumes:
       - ./data/results:/app/results
-      - ./data/models:/app/models:ro
+      # - ./data/models:/app/models:ro  # 使用镜像内模型，无需挂载
       - ./data/data:/app/data:ro
     depends_on:
       - qdrant
