@@ -7,82 +7,180 @@ SNI Recognition System with LangGraph RAG.
 ### 快速开始
 
 ```bash
-# 1. 下载配置文件
-curl -O https://raw.githubusercontent.com/yourname/sni-rag/master/docker-compose.yml
-curl -O https://raw.githubusercontent.com/yourname/sni-rag/master/.env.example
+# 1. 克隆项目
+git clone https://github.com/lafdrew/sni_search.git
+cd sni_search
 
 # 2. 配置环境变量
-cp .env.example .env
-nano .env  # 填入你的 ANTHROPIC_API_KEY
+使用7z 解压.env.7z文件 确保.env文件在项目根目录中(.env中有配置好的llm api和websearch api)
 
 # 3. 启动服务
-docker-compose up -d
+docker compose up -d
 ```
 
-访问 http://localhost 使用前端界面。
 
-### 配置加密（可选，推荐）
 
-保护敏感配置文件：
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| 前端界面 | http://localhost:3000 | Web UI |
+| 后端 API | http://localhost:9000 | REST API |
+| Qdrant 控制台 | http://localhost:6333/dashboard | 数据库管理 |
+
+
+
+
+访问 http://localhost:3000 使用前端界面。
+
+
+
+或者
+```bash
+# 基本查询
+curl -X POST http://localhost:9000/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "example.com"}'
+
+
+
+## 手动配置（开发模式）
+
+如果你需要本地开发或自定义配置，可以按照以下步骤手动安装和启动各个服务。
+
+
+
+### 1. 安装 Docker
+
+参考官网教程
+
+### 2. 安装 uv（Python 包管理器）
+
+**Linux / macOS:**
+```bash
+# 使用官方安装脚本
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 或使用 pip
+pip install uv
+```
+
+**Windows (PowerShell):**
+```powershell
+# 使用官方安装脚本
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 或使用 pip
+pip install uv
+```
+
+**验证安装:**
+```bash
+uv --version
+```
+
+### 3. 安装 Python 依赖
 
 ```bash
-# 下载加密工具
-curl -O https://raw.githubusercontent.com/yourname/sni-rag/master/encrypt-env.sh
-chmod +x encrypt-env.sh
+# 在项目根目录执行
+cd sni_search
 
-# 加密 .env 文件
-./encrypt-env.sh --encrypt .env
-# 生成 .env.7z 文件（压缩 + AES-256 加密）
-
-# 解密使用
-./encrypt-env.sh --decrypt .env.7z
-```
-
-**特性**：
-- 高压缩率（减少 50-70% 大小）
-- AES-256 加密保护
-- 文件名加密（隐藏内容列表）
-- 跨平台支持
-
-详细文档: [Docker 部署指南](docs/DOCKER_DEPLOYMENT.md)
-
-### Docker Hub 镜像
-
-- **后端**: `docker pull yourname/sni-backend:latest`
-- **前端**: `docker pull yourname/sni-frontend:latest`
-
-### 架构图
-
-```
-前端 (Nginx) ←→ 后端 (FastAPI) ←→ Qdrant (向量数据库)
-    :80              :9000               :6333
-```
-
-### 安全说明
-
-- `.env` 文件包含敏感信息，已在 `.gitignore` 中排除
-- 使用 `encrypt-env.sh` 工具加密配置文件（7-Zip AES-256）
-- `.env.7z` 加密文件可以安全提交到版本控制或云存储
-- 压缩后体积减小 50-70%，便于网络传输
-
----
-
-## Installation
-
-```bash
+# 安装所有依赖
 uv sync
-```
 
-## Usage
 
-### Import Data
+
+### 4. 配置环境变量
+
+解压.env.7z 确保.env在项目根目录中
+
+### 5. 启动 Qdrant 向量数据库
+
+**方式一：使用项目预置数据启动（推荐）**
 
 ```bash
-uv run python -m src.import_data --data-dir ./data/results
+# 使用 data/qdrant 目录中的预置数据启动 Qdrant
+# 预置数据包括少量样本数据
+docker pull qdrant/qdrant
+
+docker run -d \
+  --name sni-qdrant \
+  -p 6333:6333 \
+  -v $(pwd)/data/qdrant:/qdrant/storage:z \
+  qdrant/qdrant
+
+# 查看日志确认启动成功
+docker logs -f sni-qdrant
+
+
 ```
 
-### Run API Server
+**验证 Qdrant 运行状态:**
 
 ```bash
+# 访问 Qdrant 控制台
+http://localhost:6333/dashboard
+
+# 或使用 curl 检查健康状态
+curl http://localhost:6333/
+```
+
+
+### 简单测试（不需要起后端服务）
+
+运行多轮搜索演示（修改test_multi_round_search.py的test_query改变要查询的sni）
+```bash
+uv run python demo/test_multi_round_search.py
+```
+
+
+### 6. 启动后端服务
+
+```bash
+#使用 uv 运行
 uv run python -m src.api_server
+
 ```
+
+**验证后端运行状态:**
+
+```bash
+# 健康检查
+curl http://localhost:9000/health
+
+# 应返回: {"status": "ok"}
+
+# 测试接口
+curl -X POST http://localhost:9000/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "example.com"}'
+```
+
+### 7. 启动前端服务（可选,方便查看流程）
+
+
+
+```bash
+# 进入前端目录
+cd frontend
+
+# 安装依赖（首次运行）
+npm install
+
+
+# 启动开发服务器
+npm run dev
+
+# 前端默认运行在 http://localhost:3000
+```
+
+
+
+
+### 服务启动顺序推荐
+
+1. 启动 Qdrant（必须）
+2. 启动后端（依赖 Qdrant）
+3. 启动前端（依赖后端）
+
+
+
+
