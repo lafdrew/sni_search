@@ -1,5 +1,4 @@
 # Project-specific
-results
 nul
 deer-flow
 gpt-researcher
@@ -7,8 +6,10 @@ SurfSense
 elasticsearch
 MiroThinker
 
-# Vector Database Data
-qdrant_data/
+# Data Directory (持久化数据，不提交)
+
+data/results/
+data/models/
 
 # Environment Variables (明文文件不提交)
 .env
@@ -49,9 +50,7 @@ env/
 .pyenv/
 
 # Model Files (download via scripts, don't commit)
-models/embeddings/*.safetensors
-models/embeddings/*.bin
-models/embeddings/pytorch_model.bin
+# 已移至 data/models/
 
 # Frontend
 frontend/node_modules/

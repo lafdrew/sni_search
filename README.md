@@ -78,7 +78,7 @@ uv sync
 ### Import Data
 
 ```bash
-uv run python -m src.import_data --data-dir ./results
+uv run python -m src.import_data --data-dir ./data/results
 ```
 
 ### Run API Server

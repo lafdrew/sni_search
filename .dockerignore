@@ -47,15 +47,18 @@ frontend/.next/
 frontend/.cache/
 
 # Models (too large, mount as volume)
-models/
-*.bin
-*.pt
-*.pth
+# 现在 model 会打包到镜像中，不再排除
+# models/
+# *.bin
+# *.pt
+# *.pth
 
 # Data (mount as volume)
-qdrant_data/
-results/
+# 排除大部分 data 目录，但保留需要打包到镜像的
 data/
+# 允许模型和 Qdrant 数据打包到镜像
+!data/models/
+!data/qdrant/
 
 # Config examples
 .env.example

@@ -1,14 +1,18 @@
 version: '3.8'
 
 services:
-  # Qdrant 向量数据库
+  # Qdrant 向量数据库（包含预置数据）
   qdrant:
-    image: qdrant/qdrant:latest
+    build:
+      context: .
+      dockerfile: docker/qdrant-with-data.Dockerfile
     container_name: sni-qdrant
     ports:
       - "6333:6333"
+    # 挂载 volume 持久化用户数据
+    # 首次启动时从镜像复制基础数据到 volume
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - ./data/qdrant:/qdrant/storage
     networks:
       - sni-network
     restart: unless-stopped
@@ -30,6 +34,9 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:?请设置 ANTHROPIC_API_KEY 环境变量}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-5-20250929}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4-turbo-preview}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
 
       # 嵌入模型
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
@@ -56,9 +63,9 @@ services:
       - JINA_API_KEY=${JINA_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     volumes:
-      - ./results:/app/results
-      - ./models:/app/models:ro
-      - ./data:/app/data:ro
+      - ./data/results:/app/results
+      - ./data/models:/app/models:ro
+      - ./data/data:/app/data:ro
     depends_on:
       - qdrant
     networks:
@@ -91,7 +98,3 @@ services:
 networks:
   sni-network:
     driver: bridge
-
-volumes:
-  qdrant_storage:
-    driver: local

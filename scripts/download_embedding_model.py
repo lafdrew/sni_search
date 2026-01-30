@@ -9,7 +9,8 @@ import sys
 from pathlib import Path
 
 # Add parent directory to path to import from src
-sys.path.insert(0, str(Path(__file__).parent.parent))
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from sentence_transformers import SentenceTransformer
 from src.config import settings
@@ -23,15 +24,15 @@ def download_embedding_model(
 
     Args:
         model_name: Model name to download (default: from EMBEDDING_MODEL env var)
-        output_dir: Local directory to save model (default: ./models/embeddings)
+        output_dir: Local directory to save model (default: PROJECT_ROOT/data/models/embeddings)
     """
     # Use model from config if not specified
     if model_name is None:
         model_name = settings.EMBEDDING_MODEL
 
-    # Use default output directory if not specified
+    # Use default output directory if not specified (relative to project root)
     if output_dir is None:
-        output_dir = "./models/embeddings"
+        output_dir = str(PROJECT_ROOT / "data" / "models" / "embeddings")
 
     # Create output directory if it doesn't exist
     output_path = Path(output_dir)
@@ -95,7 +96,7 @@ def main():
         "--output",
         type=str,
         default=None,
-        help="Output directory (default: ./models/embeddings)"
+        help="Output directory (default: PROJECT_ROOT/data/models/embeddings)"
     )
 
     args = parser.parse_args()

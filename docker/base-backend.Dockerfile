@@ -30,7 +30,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app:$PYTHONPATH" \
     PYTHONUNBUFFERED=1
 
-# 可选：预下载嵌入模型（加快首次启动）
-# 注释掉以减小镜像大小，让容器启动时自动下载
-# RUN python -c "from sentence_transformers import SentenceTransformer; \
-#     SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
+# 复制本地嵌入模型到镜像
+COPY data/models/embeddings /app/models/embeddings
+
+# 设置默认使用本地模型
+ENV EMBEDDING_MODEL=/app/models/embeddings
