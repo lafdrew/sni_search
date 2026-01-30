@@ -92,7 +92,30 @@ uv sync
 
 解压.env.7z 确保.env在项目根目录中
 
-### 5. 启动 Qdrant 向量数据库
+### 5. 下载嵌入模型（离线使用）
+
+
+
+
+```bash
+# 下载模型到本地 data/models/embeddings 目录
+ uv run python scripts/download_embedding_model.py --model                               sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+
+# 下载完成后，修改 .env 文件中的 EMBEDDING_MODEL
+# EMBEDDING_MODEL=./data/models/embeddings
+```
+
+**验证模型：**
+
+```bash
+# 检查模型文件是否下载成功
+ls -la data/models/embeddings/
+
+# 应该包含以下文件：
+# config.json, model.safetensors, tokenizer.json, 等
+```
+
+### 6. 启动 Qdrant 向量数据库
 
 **方式一：使用项目预置数据启动（推荐）**
 
@@ -124,7 +147,7 @@ curl http://localhost:6333/
 ```
 
 
-### 简单测试（不需要起后端服务）
+### 7. 简单测试（不需要起后端服务）
 
 运行多轮搜索演示（修改test_multi_round_search.py的test_query改变要查询的sni）
 ```bash
@@ -132,7 +155,7 @@ uv run python demo/test_multi_round_search.py
 ```
 
 
-### 6. 启动后端服务
+### 8. 启动后端服务
 
 ```bash
 #使用 uv 运行
@@ -154,7 +177,7 @@ curl -X POST http://localhost:9000/query \
   -d '{"query": "example.com"}'
 ```
 
-### 7. 启动前端服务（可选,方便查看流程）
+### 9. 启动前端服务（可选,方便查看流程）
 
 
 
