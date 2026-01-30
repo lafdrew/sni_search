@@ -40,7 +40,7 @@ curl -X POST http://localhost:9000/query \
   -H "Content-Type: application/json" \
   -d '{"query": "example.com"}'
 
-
+```
 
 ## 手动配置（开发模式）
 
@@ -88,11 +88,11 @@ uv sync
 
 
 
-### 4. 配置环境变量
+### 配置环境变量
 
 解压.env.7z 确保.env在项目根目录中
 
-### 5. 下载嵌入模型（离线使用）
+### 下载嵌入模型（离线使用）
 
 
 
@@ -101,8 +101,7 @@ uv sync
 # 下载模型到本地 data/models/embeddings 目录
  uv run python scripts/download_embedding_model.py --model                               sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
-# 下载完成后，修改 .env 文件中的 EMBEDDING_MODEL
-# EMBEDDING_MODEL=./data/models/embeddings
+
 ```
 
 **验证模型：**
@@ -169,7 +168,7 @@ uv run python -m src.api_server
 # 健康检查
 curl http://localhost:9000/health
 
-# 应返回: {"status": "ok"}
+
 
 # 测试接口
 curl -X POST http://localhost:9000/query \
